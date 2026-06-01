@@ -255,9 +255,16 @@ el('btn-logout').addEventListener('click', () => {
 function initApp() {
   showPage('page-app');
   renderSidebar();
+  renderMobileNav();
+  setupMobileControls();
   const defaultView = currentUser.role === 'jefe' ? 'view-dashboard' : 'view-venta';
   renderMainContent();
   showView(defaultView);
+  updateMobileNavActive(defaultView);
+
+  // Set mobile header user name
+  const mobileUserName = el('mobile-user-name');
+  if (mobileUserName) mobileUserName.textContent = currentUser.name;
 }
 
 function renderSidebar() {
@@ -305,6 +312,9 @@ function renderSidebar() {
       const v = item.dataset.view;
       showView(v);
       renderView(v);
+      // Close mobile sidebar on nav click
+      closeMobileSidebar();
+      updateMobileNavActive(v);
     });
   });
 }
@@ -317,6 +327,74 @@ function navSection(label, items) {
     </div>`).join('')}
   </div>`;
 }
+
+// ─── Mobile Navigation ────────────────────────────────────
+function getMobileNavItems() {
+  const jefe = currentUser.role === 'jefe';
+  const items = [];
+  if (jefe) {
+    items.push({ view: 'view-dashboard', icon: '📊', label: 'Dashboard' });
+  }
+  items.push({ view: 'view-venta',    icon: '🛒', label: 'Venta' });
+  items.push({ view: 'view-historial',icon: '📋', label: 'Historial' });
+  items.push({ view: 'view-deudores', icon: '💳', label: 'Deudores' });
+  if (jefe) {
+    items.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
+  } else {
+    items.push({ view: 'view-gastos', icon: '💸', label: 'Caja' });
+  }
+  return items;
+}
+
+function renderMobileNav() {
+  const container = el('mobile-nav-items');
+  if (!container) return;
+  const items = getMobileNavItems();
+  container.innerHTML = items.map(i => `
+    <button class="mobile-nav-btn" data-view="${i.view}">
+      <span class="mobile-nav-icon">${i.icon}</span>
+      ${i.label}
+    </button>
+  `).join('');
+
+  container.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.view;
+      showView(v);
+      renderView(v);
+      updateMobileNavActive(v);
+    });
+  });
+}
+
+function updateMobileNavActive(viewId) {
+  document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.view === viewId);
+  });
+}
+
+function setupMobileControls() {
+  // Hamburger menu
+  const menuBtn = el('mobile-menu-btn');
+  const overlay = el('sidebar-overlay');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      el('sidebar').classList.toggle('open');
+      overlay.classList.toggle('active');
+    });
+  }
+  if (overlay) {
+    overlay.addEventListener('click', closeMobileSidebar);
+  }
+}
+
+function closeMobileSidebar() {
+  const sidebar = el('sidebar');
+  const overlay = el('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('open');
+  if (overlay) overlay.classList.remove('active');
+}
+
 
 function renderMainContent() {
   el('main-content').innerHTML = `

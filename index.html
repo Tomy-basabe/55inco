@@ -63,6 +63,19 @@
 <!-- ═══════════════════════════ APP SHELL ═══════════════════════════ -->
 <div id="page-app" class="page">
 
+  <!-- Mobile Header -->
+  <div class="mobile-header" id="mobile-header">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Abrir menú">☰</button>
+    <div class="mobile-logo">
+      <div class="logo-icon sm">5</div>
+      <span>5inco</span>
+    </div>
+    <div class="mobile-user-name" id="mobile-user-name"></div>
+  </div>
+
+  <!-- Sidebar Overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -85,6 +98,13 @@
   <main class="main-content" id="main-content">
     <!-- Views injected here -->
   </main>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+    <div class="mobile-nav-items" id="mobile-nav-items">
+      <!-- Rendered dynamically in app.js -->
+    </div>
+  </nav>
 
 </div>
 
