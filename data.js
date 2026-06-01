@@ -3,6 +3,7 @@
    ═══════════════════════════════════════ */
 
 const DB = {
+  // ── Supabase Configuration ────────────
   SUPABASE_URL: 'https://oiyviypyaqocfnzcyjsn.supabase.co',
   SUPABASE_KEY: 'sb_publishable_y07f9bN1fLQ8_jCY-cFvyQ_s7YPylH0',
   supabase: null,
@@ -271,7 +272,6 @@ const DB = {
   saveUsers(u) {
     this.set(this.KEYS.users, u);
     if (this.supabase) {
-      // Upsert a todos los usuarios modificados
       const promises = u.map(user => 
         this.supabase.from('users').upsert({
           id: user.id,
@@ -299,7 +299,7 @@ const DB = {
 
     if (this.supabase) {
       this.supabase.from('categories').insert(cat)
-        .catch(err => console.error('Error insertando categoría en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error insertando categoría en Supabase:', error); });
     }
     return cat;
   },
@@ -307,7 +307,7 @@ const DB = {
     this.set(this.KEYS.categories, this.getCategories().filter(c => c.id !== id));
     if (this.supabase) {
       this.supabase.from('categories').delete().eq('id', id)
-        .catch(err => console.error('Error eliminando categoría en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error eliminando categoría en Supabase:', error); });
     }
   },
   updateCategory(id, name) {
@@ -315,7 +315,7 @@ const DB = {
     this.set(this.KEYS.categories, cats);
     if (this.supabase) {
       this.supabase.from('categories').update({ name }).eq('id', id)
-        .catch(err => console.error('Error actualizando categoría en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error actualizando categoría en Supabase:', error); });
     }
   },
 
@@ -334,7 +334,7 @@ const DB = {
         price: p.price,
         talle: p.talle || null,
         stock: p.stock
-      }).catch(err => console.error('Error insertando producto en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error insertando producto en Supabase:', error); });
     }
     return p;
   },
@@ -351,7 +351,7 @@ const DB = {
           price: p.price,
           talle: p.talle || null,
           stock: p.stock
-        }).eq('id', id).catch(err => console.error('Error actualizando producto en Supabase:', err));
+        }).eq('id', id).then(({ error }) => { if (error) console.error('Error actualizando producto en Supabase:', error); });
       }
     }
   },
@@ -359,7 +359,7 @@ const DB = {
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));
     if (this.supabase) {
       this.supabase.from('products').delete().eq('id', id)
-        .catch(err => console.error('Error eliminando producto en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error eliminando producto en Supabase:', error); });
     }
   },
 
@@ -371,7 +371,6 @@ const DB = {
     sales.push(s); this.set(this.KEYS.sales, sales);
 
     if (this.supabase) {
-      // Extraemos campos principales y dejamos el resto en el JSONB 'details'
       const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
       this.supabase.from('sales').insert({
         id: s.id,
@@ -381,7 +380,7 @@ const DB = {
         split_details: splitDetails || null,
         returned: returned || false,
         details: rest
-      }).catch(err => console.error('Error insertando venta en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error insertando venta en Supabase:', error); });
     }
     return s;
   },
@@ -399,7 +398,7 @@ const DB = {
           split_details: splitDetails || null,
           returned: returned || false,
           details: rest
-        }).eq('id', id).catch(err => console.error('Error actualizando venta en Supabase:', err));
+        }).eq('id', id).then(({ error }) => { if (error) console.error('Error actualizando venta en Supabase:', error); });
       }
     }
   },
@@ -413,7 +412,7 @@ const DB = {
 
     if (this.supabase) {
       this.supabase.from('debtors').insert(d)
-        .catch(err => console.error('Error insertando deudor en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error insertando deudor en Supabase:', error); });
     }
     return d;
   },
@@ -425,7 +424,7 @@ const DB = {
       const d = debtors.find(x => x.id === id);
       if (d) {
         this.supabase.from('debtors').update(d).eq('id', id)
-          .catch(err => console.error('Error actualizando deudor en Supabase:', err));
+          .then(({ error }) => { if (error) console.error('Error actualizando deudor en Supabase:', error); });
       }
     }
   },
@@ -433,7 +432,7 @@ const DB = {
     this.set(this.KEYS.debtors, this.getDebtors().filter(d => d.id !== id));
     if (this.supabase) {
       this.supabase.from('debtors').delete().eq('id', id)
-        .catch(err => console.error('Error eliminando deudor de Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error eliminando deudor de Supabase:', error); });
     }
   },
 
@@ -452,7 +451,7 @@ const DB = {
         paid: d.paid,
         date: d.date,
         paid_date: d.paidDate || null
-      }).catch(err => console.error('Error insertando deuda en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error insertando deuda en Supabase:', error); });
     }
     return d;
   },
@@ -465,7 +464,7 @@ const DB = {
       this.supabase.from('debts').update({
         paid: true,
         paid_date: dateStr
-      }).eq('id', id).catch(err => console.error('Error actualizando pago de deuda en Supabase:', err));
+      }).eq('id', id).then(({ error }) => { if (error) console.error('Error actualizando pago de deuda en Supabase:', error); });
     }
   },
   getDebtorBalance(debtorId) {
@@ -486,7 +485,7 @@ const DB = {
         user_id: userId,
         date: date,
         hours: hours
-      }).catch(err => console.error('Error guardando horas en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error guardando horas en Supabase:', error); });
     }
   },
   getHoursForMonth(userId, year, month) {
@@ -521,7 +520,7 @@ const DB = {
         date: e.date,
         amount: e.amount,
         description: e.description || e.detail || null
-      }).catch(err => console.error('Error insertando gasto en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error insertando gasto en Supabase:', error); });
     }
     return e;
   },
@@ -529,7 +528,7 @@ const DB = {
     this.set(this.KEYS.expenses, this.getExpenses().filter(e => e.id !== id));
     if (this.supabase) {
       this.supabase.from('expenses').delete().eq('id', id)
-        .catch(err => console.error('Error eliminando gasto en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error eliminando gasto en Supabase:', error); });
     }
   },
 
@@ -542,7 +541,7 @@ const DB = {
 
     if (this.supabase) {
       this.supabase.from('fixed_expenses').insert(item)
-        .catch(err => console.error('Error insertando gasto fijo en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error insertando gasto fijo en Supabase:', error); });
     }
     return item;
   },
@@ -550,7 +549,7 @@ const DB = {
     this.set(this.KEYS.fixedExpenses, this.getFixedExpenses().filter(f => f.id !== id));
     if (this.supabase) {
       this.supabase.from('fixed_expenses').delete().eq('id', id)
-        .catch(err => console.error('Error eliminando gasto fijo en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error eliminando gasto fijo en Supabase:', error); });
     }
   },
   updateFixedExpense(id, name, amount) {
@@ -558,7 +557,7 @@ const DB = {
     this.set(this.KEYS.fixedExpenses, fe);
     if (this.supabase) {
       this.supabase.from('fixed_expenses').update({ name, amount }).eq('id', id)
-        .catch(err => console.error('Error actualizando gasto fijo en Supabase:', err));
+        .then(({ error }) => { if (error) console.error('Error actualizando gasto fijo en Supabase:', error); });
     }
   },
 
@@ -579,7 +578,7 @@ const DB = {
         active: data.active,
         opened_by: data.openedBy,
         opened_at: data.openedAt
-      }).catch(err => console.error('Error guardando sesión de caja en Supabase:', err));
+      }).then(({ error }) => { if (error) console.error('Error guardando sesión de caja en Supabase:', error); });
     }
   },
 };
