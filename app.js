@@ -1911,6 +1911,8 @@ function openEditDebtor(id) {
     <div class="form-group"><label>Nombre</label><input id="ed-name" type="text" value="${d.name}"/></div>
     <div class="form-group"><label>Teléfono</label><input id="ed-phone" type="text" value="${d.phone||''}"/></div>
     <div class="form-group"><label>Recargo (%)</label><input id="ed-sur" type="number" value="${d.surcharge}"/></div>
+    <div class="divider"></div>
+    <div class="form-group"><label>Agregar deuda (Opcional)</label><input id="ed-add-debt" type="number" placeholder="Monto a sumar" min="0"/></div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditDebtor('${id}')">Guardar</button>
@@ -1919,9 +1921,16 @@ function openEditDebtor(id) {
 function saveEditDebtor(id) {
   const name = el('ed-name').value.trim();
   const phone = el('ed-phone').value.trim();
-  const surcharge = parseFloat(el('ed-sur').value)||10;
+  const surcharge = parseFloat(el('ed-sur').value)||0;
+  const newDebt = parseFloat(el('ed-add-debt').value)||0;
+  
   if (!name) { toast('El nombre es requerido.','error'); return; }
   DB.updateDebtor(id, { name, phone, surcharge });
+  
+  if (newDebt > 0) {
+    DB.addDebt({ debtorId: id, amount: newDebt });
+  }
+  
   closeModal(); toast('Deudor actualizado.','success');
   renderView('view-deudores');
 }
