@@ -3,7 +3,7 @@
    ═══════════════════════════════════════ */
 
 // ─── Init ─────────────────────────────────────────────────
-DB.seed();
+// Supabase y seed se inicializan asíncronamente al final en startApp()
 
 let currentUser = null;
 let cart = [];        // [{ product, qty, discount }]
@@ -2198,17 +2198,21 @@ function deleteExpenseConfirm(id) {
   renderView('view-gastos');
 }
 
-// ─── Auto-login check ────────────────────────────────────
-(function() {
+// ─── Auto-login check & Supabase Startup ──────────────────
+async function startApp() {
+  // Inicializar Supabase y sincronizar la caché local
+  await DB.initSupabase();
+  DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
+  
   renderNetflixProfiles();
   const session = DB.getSession();
   if (session && session.id) {
-    // Verify user still exists
+    // Verificar si el usuario aún existe
     const user = DB.getUsers().find(u=>u.id===session.id);
     if (user) {
       currentUser = user;
       
-      // Auto-register default hours if cashier logs in
+      // Auto-registrar horas del cajero si inicia jornada hoy
       if (currentUser.role === 'cajero') {
         const dateStr = today();
         const hoursData = DB.getHours();
@@ -2224,4 +2228,5 @@ function deleteExpenseConfirm(id) {
     }
   }
   showPage('page-login');
-})();
+}
+startApp();
