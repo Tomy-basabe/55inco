@@ -1803,14 +1803,14 @@ function finalizeExchangeDiff(oldSaleId, newProductId, diff) {
 //  DEUDORES
 // ══════════════════════════════════════════════════════════
 function buildDeudores() {
-  const debtors = DB.getDebtors();
+  const debtors = DB.getDebtors().sort((a,b) => a.name.localeCompare(b.name));
   const debts = DB.getDebts();
 
   const cards = debtors.map(d => {
     const balance = DB.getDebtorBalance(d.id);
     const dDebts = debts.filter(x=>x.debtorId===d.id && !x.paid);
     return `
-    <div class="debtor-card">
+    <div class="debtor-card" data-name="${d.name.toLowerCase()}">
       <div class="debtor-avatar">${initials(d.name)}</div>
       <div class="debtor-info">
         <div class="debtor-name">${d.name}</div>
@@ -1834,13 +1834,34 @@ function buildDeudores() {
     <h2>💳 Lista de Deudores</h2>
     <p>${debtors.length} deudor(es) · Deuda total: <strong class="text-red">${fmt(totalDebt)}</strong></p>
     <div class="view-actions">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="deudores-search" placeholder="Buscar deudor...">
+      </div>
       <button class="btn btn-primary" onclick="openNewDebtorModal()">➕ Nuevo deudor</button>
     </div>
   </div>
-  ${cards || '<div class="empty-state"><div class="empty-icon">💳</div><p>No hay deudores registrados.</p></div>'}`;
+  <div id="deudores-list">
+    ${cards || '<div class="empty-state"><div class="empty-icon">💳</div><p>No hay deudores registrados.</p></div>'}
+  </div>`;
 }
 
-function bindDeudores() {}
+function bindDeudores() {
+  const searchInput = el('deudores-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value.toLowerCase();
+      document.querySelectorAll('#deudores-list .debtor-card').forEach(card => {
+        const name = card.dataset.name;
+        if (name.includes(val)) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  }
+}
 
 function openDebtorDetail(id) {
   const debtor = DB.getDebtors().find(d=>d.id===id);
