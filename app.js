@@ -49,6 +49,103 @@ function toast(msg, type = 'info') {
   setTimeout(() => div.remove(), 3000);
 }
 
+// ─── Searchable Select Helper ──────────────────────────────
+function sortByName(arr, key = 'name') {
+  return [...arr].sort((a, b) => a[key].localeCompare(b[key], 'es'));
+}
+
+/**
+ * Converts a <select id="selectId"> inside a .form-group into a searchable combobox.
+ * Call after the modal DOM is rendered.
+ * @param {string} selectId - id of the original <select>
+ * @param {Function} [onChangeCb] - optional callback(value, label) on selection
+ */
+function makeSearchableSelect(selectId, onChangeCb) {
+  setTimeout(() => {
+    const sel = document.getElementById(selectId);
+    if (!sel || sel.dataset.searchable) return;
+    sel.dataset.searchable = '1';
+    sel.style.display = 'none';
+
+    const options = Array.from(sel.options).map(o => ({ value: o.value, label: o.text }));
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ss-wrapper';
+    wrapper.style.cssText = 'position:relative;';
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'ss-search';
+    searchInput.placeholder = '🔍 Buscar...';
+    searchInput.autocomplete = 'off';
+    searchInput.style.cssText = 'width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;cursor:pointer;box-sizing:border-box;';
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'ss-dropdown';
+    dropdown.style.cssText = 'display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);z-index:9999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);';
+
+    function renderOptions(filter = '') {
+      const q = filter.toLowerCase();
+      dropdown.innerHTML = '';
+      options.filter(o => o.label.toLowerCase().includes(q)).forEach(o => {
+        const item = document.createElement('div');
+        item.className = 'ss-option';
+        item.style.cssText = 'padding:9px 14px;cursor:pointer;font-size:13px;transition:background .15s;';
+        item.textContent = o.label;
+        item.dataset.value = o.value;
+        item.addEventListener('mouseenter', () => item.style.background = 'var(--bg3)');
+        item.addEventListener('mouseleave', () => item.style.background = '');
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          sel.value = o.value;
+          searchInput.value = o.value && o.value !== '' ? o.label : '';
+          searchInput.style.borderColor = 'var(--border)';
+          dropdown.style.display = 'none';
+          sel.dispatchEvent(new Event('change'));
+          if (onChangeCb) onChangeCb(o.value, o.label);
+        });
+        dropdown.appendChild(item);
+      });
+      if (dropdown.children.length === 0) {
+        const empty = document.createElement('div');
+        empty.textContent = 'Sin resultados';
+        empty.style.cssText = 'padding:10px 14px;font-size:12px;color:var(--text-3);';
+        dropdown.appendChild(empty);
+      }
+    }
+
+    // Show selected value if pre-selected
+    const preSelected = options.find(o => o.value === sel.value);
+    if (preSelected && preSelected.value) searchInput.value = preSelected.label;
+
+    searchInput.addEventListener('focus', () => {
+      searchInput.select();
+      renderOptions(searchInput.value === (options.find(o=>o.value===sel.value)?.label||'') ? '' : searchInput.value);
+      dropdown.style.display = 'block';
+      searchInput.style.borderColor = 'var(--accent)';
+      searchInput.style.boxShadow = '0 0 0 3px rgba(124,110,248,.2)';
+    });
+    searchInput.addEventListener('input', () => {
+      renderOptions(searchInput.value);
+      dropdown.style.display = 'block';
+    });
+    searchInput.addEventListener('blur', () => {
+      setTimeout(() => {
+        dropdown.style.display = 'none';
+        searchInput.style.borderColor = 'var(--border)';
+        searchInput.style.boxShadow = '';
+        // Restore label if value still selected
+        const cur = options.find(o => o.value === sel.value);
+        if (cur && cur.value) searchInput.value = cur.label;
+        else if (!sel.value) searchInput.value = '';
+      }, 150);
+    });
+
+    wrapper.appendChild(searchInput);
+    wrapper.appendChild(dropdown);
+    sel.parentNode.insertBefore(wrapper, sel.nextSibling);
+  }, 30);
+}
+
 // ─── Modal ────────────────────────────────────────────────
 function openModal(title, bodyHtml, footerHtml = '') {
   el('modal-title').textContent = title;
@@ -845,7 +942,7 @@ function bindStock() {
 }
 
 function openNewProduct(prefillCatId) {
-  const cats = DB.getCategories();
+  const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===prefillCatId?'selected':''}>${c.name}</option>`).join('');
   openModal('Nueva Prenda', `
     <div class="form-group"><label>Nombre</label><input id="np-name" type="text" placeholder="Ej: Remera Básica"/></div>
@@ -867,15 +964,29 @@ function openNewProduct(prefillCatId) {
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveNewProduct()">Guardar</button>
   `);
-  el('np-cat').addEventListener('change', function() {
-    if (this.value === '__new__') {
+
+  // Pre-fill if there's a category pre-selected
+  if (prefillCatId) {
+    const cat = cats.find(c => c.id === prefillCatId);
+    if (cat) setTimeout(() => { const n = el('np-name'); if (n && !n.value) n.value = cat.name; }, 50);
+  }
+
+  makeSearchableSelect('np-cat', (value, label) => {
+    const nameInput = el('np-name');
+    if (value && value !== '__new__' && nameInput && !nameInput.value.trim()) {
+      nameInput.value = label;
+    }
+    if (value === '__new__') {
       const name = prompt('Nombre de la nueva categoría:');
       if (name && name.trim()) {
         const cat = DB.addCategory(name.trim());
-        this.innerHTML += `<option value="${cat.id}" selected>${cat.name}</option>`;
-        this.value = cat.id;
+        const selEl = el('np-cat');
+        if (selEl) {
+          selEl.innerHTML += `<option value="${cat.id}" selected>${cat.name}</option>`;
+          selEl.value = cat.id;
+        }
         toast('Categoría creada.','success');
-      } else { this.value = ''; }
+      }
     }
   });
 }
@@ -895,7 +1006,7 @@ function saveNewProduct() {
 function openEditProduct(id) {
   const p = DB.getProducts().find(x=>x.id===id);
   if (!p) return;
-  const cats = DB.getCategories();
+  const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('');
   openModal('Editar Prenda', `
     <div class="form-group"><label>Nombre</label><input id="ep-name" type="text" value="${p.name}"/></div>
@@ -914,6 +1025,7 @@ function openEditProduct(id) {
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditProduct('${id}')">Guardar</button>
   `);
+  makeSearchableSelect('ep-cat');
 }
 function saveEditProduct(id) {
   const name = el('ep-name').value.trim();
@@ -1036,7 +1148,7 @@ function buildVenta() {
                 <label>Seleccionar Deudor (si carga en deudor)</label>
                 <select id="v-debtor-select">
                   <option value="">Elegir deudor...</option>
-                  ${DB.getDebtors().map(d=>`<option value="${d.id}">${d.name} (+${d.surcharge}%)</option>`).join('')}
+                  ${sortByName(DB.getDebtors()).map(d=>`<option value="${d.id}">${d.name} (+${d.surcharge}%)</option>`).join('')}
                   <option value="__new__">+ Crear nuevo deudor</option>
                 </select>
               </div>
@@ -1112,6 +1224,7 @@ function bindVenta() {
   salePayType = 'efectivo';
   saleDebtorId = null;
   renderCartItems();
+  makeSearchableSelect('v-debtor-select');
 }
 
 function deleteCatFromVenta(id, name) {
@@ -1335,15 +1448,11 @@ function saveDebtorFromVenta() {
 }
 
 function openNewProductFromVenta() {
-  const cats = DB.getCategories();
+  const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
   openModal('➕ Crear producto rápido', `
     <p class="text-muted" style="font-size:13px; margin-bottom:14px;">Creá el producto y se agregará automáticamente al carrito.</p>
-    <div class="form-group">
-      <label>Nombre del producto</label>
-      <input id="qp-name" type="text" placeholder="Ej: Remera blanca talle M" autofocus/>
-    </div>
     <div class="form-row cols-2">
       <div class="form-group">
         <label>Categoría</label>
@@ -1358,6 +1467,10 @@ function openNewProductFromVenta() {
         <input id="qp-price" type="number" placeholder="0" min="0"/>
       </div>
     </div>
+    <div class="form-group">
+      <label>Nombre del producto</label>
+      <input id="qp-name" type="text" placeholder="Se autocompleta con la categoría"/>
+    </div>
     <div id="qp-newcat-container" style="display:none;" class="form-group">
       <label>Nombre de nueva categoría</label>
       <input id="qp-newcat-name" type="text" placeholder="Ej: Pantalones"/>
@@ -1367,20 +1480,27 @@ function openNewProductFromVenta() {
     <button class="btn btn-primary" onclick="saveQuickProductFromVenta()">✅ Crear y agregar al carrito</button>
   `);
 
-  // Show/hide new category field on select change
-  setTimeout(() => {
-    const catSel = el('qp-cat');
-    if (catSel) {
-      catSel.addEventListener('change', function() {
-        const newCatContainer = el('qp-newcat-container');
-        if (this.value === '__new__') {
-          newCatContainer.style.display = 'block';
-          el('qp-newcat-name').focus();
-        } else {
-          newCatContainer.style.display = 'none';
-        }
-      });
+  makeSearchableSelect('qp-cat', (value, label) => {
+    const nameInput = el('qp-name');
+    const newCatContainer = el('qp-newcat-container');
+    if (value === '__new__') {
+      if (newCatContainer) newCatContainer.style.display = 'block';
+      const newNameInput = el('qp-newcat-name');
+      if (newNameInput) newNameInput.focus();
+    } else {
+      if (newCatContainer) newCatContainer.style.display = 'none';
+      // Auto-fill name with category name if name is empty or was previously auto-set
+      if (nameInput && (!nameInput.value.trim() || nameInput.dataset.autofilled === '1')) {
+        nameInput.value = label;
+        nameInput.dataset.autofilled = '1';
+      }
     }
+  });
+
+  // Clear autofilled flag if user types manually
+  setTimeout(() => {
+    const n = el('qp-name');
+    if (n) n.addEventListener('input', () => { n.dataset.autofilled = '0'; });
   }, 50);
 }
 
