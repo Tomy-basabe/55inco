@@ -2071,11 +2071,23 @@ function openDebtorDetail(id) {
   const debts = DB.getDebts().filter(d=>d.debtorId===id);
   const balance = DB.getDebtorBalance(id);
   const rows = debts.map(debt => {
+    const isAbono = debt.amount < 0;
+    const amountStr = isAbono ? `+${fmt(Math.abs(debt.amount))}` : fmt(debt.amount);
+    const badgeCls = debt.paid ? 'badge-green' : (isAbono ? 'badge-purple' : 'badge-red');
+    const badgeTxt = debt.paid ? (isAbono ? 'Aplicado' : 'Pagado') : (isAbono ? 'Abono a favor' : 'Pendiente');
+    
+    let actionHtml = '';
+    if (debt.paid) {
+      actionHtml = fmtDate(debt.paidDate);
+    } else {
+      actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ ${isAbono ? 'Archivar abono' : 'Marcar pagado'}</button>`;
+    }
+
     return `<tr>
       <td>${fmtDate(debt.date)}</td>
-      <td>${fmt(debt.amount)}</td>
-      <td><span class="badge ${debt.paid?'badge-green':'badge-red'}">${debt.paid?'Pagado':'Pendiente'}</span></td>
-      <td>${!debt.paid?`<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ Marcar pagado</button>`:fmtDate(debt.paidDate)}</td>
+      <td style="font-weight:600; ${isAbono ? 'color:var(--green)' : ''}">${amountStr}</td>
+      <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+      <td>${actionHtml}</td>
     </tr>`;
   }).join('');
 
@@ -2100,8 +2112,13 @@ function openDebtorDetail(id) {
 }
 
 function payDebt(debtId, debtorId) {
+  const debt = DB.getDebts().find(d => d.id === debtId);
   DB.payDebt(debtId);
-  toast('Deuda marcada como pagada.','success');
+  if (debt && debt.amount < 0) {
+    toast('Abono archivado.','success');
+  } else {
+    toast('Deuda marcada como pagada.','success');
+  }
   openDebtorDetail(debtorId);
   renderView('view-deudores');
 }
@@ -2135,7 +2152,10 @@ function openEditDebtor(id) {
     <div class="form-group"><label>Teléfono</label><input id="ed-phone" type="text" value="${d.phone||''}"/></div>
     <div class="form-group"><label>Recargo (%)</label><input id="ed-sur" type="number" value="${d.surcharge}"/></div>
     <div class="divider"></div>
-    <div class="form-group"><label>Agregar deuda (Opcional)</label><input id="ed-add-debt" type="number" placeholder="Monto a sumar" min="0"/></div>
+    <div class="form-row cols-2">
+      <div class="form-group"><label>➕ Sumar deuda</label><input id="ed-add-debt" type="number" placeholder="$ a sumar" min="0"/></div>
+      <div class="form-group"><label>➖ Abonar (Restar)</label><input id="ed-sub-debt" type="number" placeholder="$ a restar" min="0"/></div>
+    </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditDebtor('${id}')">Guardar</button>
@@ -2146,12 +2166,17 @@ function saveEditDebtor(id) {
   const phone = el('ed-phone').value.trim();
   const surcharge = parseFloat(el('ed-sur').value)||0;
   const newDebt = parseFloat(el('ed-add-debt').value)||0;
+  const payDebtAmt = parseFloat(el('ed-sub-debt').value)||0;
   
   if (!name) { toast('El nombre es requerido.','error'); return; }
   DB.updateDebtor(id, { name, phone, surcharge });
   
   if (newDebt > 0) {
     DB.addDebt({ debtorId: id, amount: newDebt });
+  }
+  if (payDebtAmt > 0) {
+    // Add negative debt to represent a payment/abono
+    DB.addDebt({ debtorId: id, amount: -Math.abs(payDebtAmt) });
   }
   
   closeModal(); toast('Deudor actualizado.','success');
