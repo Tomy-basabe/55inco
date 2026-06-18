@@ -955,19 +955,6 @@ function buildVenta() {
       `).join('')}
     </div>`;
 
-  const quickAddBar = `
-    <div class="quick-add-bar" style="display: flex; gap: 8px; margin-bottom: 14px; background: var(--bg2); padding: 8px; border-radius: var(--r-sm); border: 1px solid var(--border); align-items: center; flex-wrap: wrap;">
-      <span style="font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap;">⚡ Venta Rápida:</span>
-      <input type="text" id="v-quick-name" placeholder="Nombre prenda (ej: Remera Negra)" style="flex: 1.5; min-width: 120px; height: 32px; font-size: 12px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg3); color: var(--text);" />
-      <input type="number" id="v-quick-price" placeholder="Precio $" style="width: 80px; height: 32px; font-size: 12px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg3); color: var(--text);" />
-      <select id="v-quick-cat" style="width: 110px; height: 32px; font-size: 12px; padding: 0 4px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg3); color: var(--text);">
-        <option value="">Categoría...</option>
-        ${cats.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
-      </select>
-      <button class="btn btn-primary btn-sm" onclick="addQuickProductFromVentaBar()" style="height: 32px; font-size: 11px; padding: 0 10px;">⚡ Cargar y Vender</button>
-    </div>
-  `;
-
   const productCards = prods.map(p => {
     const cat = cats.find(c=>c.id===p.categoryId);
     return `
@@ -996,7 +983,6 @@ function buildVenta() {
         <button class="btn btn-ghost btn-sm" onclick="openNewProductFromVenta()">➕ Prenda</button>
         <button class="btn btn-ghost btn-sm" onclick="openNewCatFromVenta()">🏷️ Categoría</button>
       </div>
-      ${quickAddBar}
       ${catFilters}
       <div class="product-grid" id="v-product-grid">
         ${productCards || '<div class="empty-state"><div class="empty-icon">👗</div><p>No hay prendas cargadas aún.</p></div>'}
@@ -1126,55 +1112,6 @@ function bindVenta() {
   salePayType = 'efectivo';
   saleDebtorId = null;
   renderCartItems();
-
-  // Enter key support for quick add
-  const qName = el('v-quick-name');
-  const qPrice = el('v-quick-price');
-  const triggerAdd = (e) => {
-    if (e.key === 'Enter') {
-      addQuickProductFromVentaBar();
-    }
-  };
-  if (qName) qName.addEventListener('keydown', triggerAdd);
-  if (qPrice) qPrice.addEventListener('keydown', triggerAdd);
-}
-
-function addQuickProductFromVentaBar() {
-  const nameInput = el('v-quick-name');
-  const priceInput = el('v-quick-price');
-  const catInput = el('v-quick-cat');
-  
-  const name = nameInput?.value.trim();
-  const price = parseFloat(priceInput?.value) || 0;
-  let categoryId = catInput?.value;
-  
-  if (!name) { toast('Ingresá el nombre del producto.', 'error'); nameInput?.focus(); return; }
-  
-  if (!categoryId) {
-    const activeFilter = document.querySelector('#v-cat-filters .cat-filter.active');
-    const activeCatId = activeFilter ? activeFilter.dataset.cat : 'all';
-    if (activeCatId && activeCatId !== 'all') {
-      categoryId = activeCatId;
-    } else {
-      const cats = DB.getCategories();
-      if (cats.length > 0) {
-        categoryId = cats[0].id;
-      } else {
-        const newCat = DB.addCategory('General');
-        categoryId = newCat.id;
-      }
-    }
-  }
-  
-  const newProd = DB.addProduct({ name, categoryId, talle: '', price, stock: 1 });
-  
-  if (nameInput) nameInput.value = '';
-  if (priceInput) priceInput.value = '';
-  
-  toast(`"${name}" creado y agregado al carrito.`, 'success');
-  renderView('view-venta');
-  
-  setTimeout(() => addToCart(newProd.id), 100);
 }
 
 function deleteCatFromVenta(id, name) {
