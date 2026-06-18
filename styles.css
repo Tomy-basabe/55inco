@@ -420,12 +420,14 @@ tr:hover td { background: var(--bg3); }
 /* ───── Category Filter ───── */
 .cat-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .cat-filter {
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
   border: 1px solid var(--border); background: var(--bg2);
   color: var(--text-2); cursor: pointer; transition: all var(--transition);
 }
 .cat-filter:hover { border-color: var(--accent); color: var(--accent); }
 .cat-filter.active { background: rgba(124,110,248,.15); border-color: var(--accent); color: var(--accent); }
+.cat-filter .delete-cat-pill:hover { color: var(--red) !important; opacity: 1 !important; }
 
 /* ───── Sale Cart ───── */
 .sale-layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; height: calc(100vh - 140px); }
