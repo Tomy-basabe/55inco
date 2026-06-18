@@ -1253,7 +1253,7 @@ function addToCart(productId) {
     if (existing.qty >= p.stock) { toast('Stock máximo alcanzado.','error'); return; }
     existing.qty++;
   } else {
-    cart.push({ productId, qty: 1 });
+    cart.push({ productId, qty: 1, customPrice: p.price });
   }
   renderCartItems();
   // Visual feedback
@@ -1298,7 +1298,10 @@ function renderCartItems() {
         </div>
       </div>
       <div style="text-align:right">
-        <div class="cart-item-price">${fmt(p.price*c.qty)}</div>
+        <div class="cart-item-price" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-bottom:2px;">
+          $ <input type="number" class="input-sm" style="width:70px;text-align:right;padding:2px 4px;font-size:13px;" value="${c.customPrice !== undefined ? c.customPrice : p.price}" onchange="updateCartItemPrice('${c.productId}', this.value)">
+        </div>
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Sub: ${fmt((c.customPrice !== undefined ? c.customPrice : p.price)*c.qty)}</div>
         <button class="cart-item-remove" onclick="removeFromCart('${c.productId}')">×</button>
       </div>
     </div>`;
@@ -1315,9 +1318,23 @@ function changeQty(productId, delta) {
   renderCartItems();
 }
 
+function updateCartItemPrice(productId, newPrice) {
+  const item = cart.find(c => c.productId === productId);
+  if (!item) return;
+  const parsed = parseFloat(newPrice);
+  if (!isNaN(parsed) && parsed >= 0) {
+    item.customPrice = parsed;
+  }
+  renderCartItems();
+}
+
 function updateCartTotals() {
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c) => { const p = prods.find(x=>x.id===c.productId); return a+(p?p.price*c.qty:0); }, 0);
+  const sub = cart.reduce((a,c) => { 
+    const p = prods.find(x=>x.id===c.productId); 
+    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
+    return a+(price*c.qty); 
+  }, 0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   const discAmt = sub * (disc/100);
   const total = sub - discAmt;
@@ -1361,7 +1378,11 @@ function updateCartTotals() {
 
 function validateSplitAmounts() {
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c)=>{ const p=prods.find(x=>x.id===c.productId); return a+(p?p.price*c.qty:0); },0);
+  const sub = cart.reduce((a,c)=>{ 
+    const p=prods.find(x=>x.id===c.productId); 
+    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
+    return a+(price*c.qty); 
+  },0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   let baseTarget = sub - (sub * (disc/100));
 
@@ -1578,7 +1599,11 @@ function confirmSale() {
   }
 
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c)=>{ const p=prods.find(x=>x.id===c.productId); return a+(p?p.price*c.qty:0); },0);
+  const sub = cart.reduce((a,c)=>{ 
+    const p=prods.find(x=>x.id===c.productId); 
+    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
+    return a+(price*c.qty); 
+  },0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   const discAmt = sub*(disc/100);
   let baseTotal = sub - discAmt;
@@ -1613,7 +1638,8 @@ function confirmSale() {
 
   const items = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
-    return { productId: c.productId, name: p?.name, price: p?.price, qty: c.qty };
+    const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
+    return { productId: c.productId, name: p?.name, price: price, qty: c.qty };
   });
 
   // Calculate dynamic change
@@ -1673,7 +1699,8 @@ function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti
   const prods = DB.getProducts();
   const items = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
-    return { productId: c.productId, name: p?.name, price: p?.price, qty: c.qty };
+    const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
+    return { productId: c.productId, name: p?.name, price: price, qty: c.qty };
   });
 
   // Discount stock
@@ -2083,8 +2110,12 @@ function openDebtorDetail(id) {
       actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ ${isAbono ? 'Archivar abono' : 'Marcar pagado'}</button>`;
     }
 
+    const saleHtml = debt.saleId 
+      ? `<br/><a href="#" onclick="viewSaleTicket('${debt.saleId}')" style="font-size:11px;color:var(--accent);text-decoration:underline;white-space:nowrap;">Ver Venta</a>`
+      : '';
+
     return `<tr>
-      <td>${fmtDate(debt.date)}</td>
+      <td>${fmtDate(debt.date)}${saleHtml}</td>
       <td style="font-weight:600; ${isAbono ? 'color:var(--green)' : ''}">${amountStr}</td>
       <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
       <td>${actionHtml}</td>
@@ -2108,6 +2139,41 @@ function openDebtorDetail(id) {
         <tbody>${rows||'<tr><td colspan="4" style="text-align:center;color:var(--text-3)">Sin deudas registradas</td></tr>'}</tbody>
       </table>
     </div>
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
+}
+
+function viewSaleTicket(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) { toast('Venta no encontrada', 'error'); return; }
+  
+  const itemsHtml = sale.items?.map(i => `
+    <div class="cart-total-row"><span>${i.name} x${i.qty}</span><span>${fmt(i.price*i.qty)}</span></div>
+  `).join('') || '';
+
+  const splitHtml = sale.splitDetails ? `
+    <hr class="divider"/>
+    <div style="font-size:12px;color:var(--text-2);text-align:right;">
+      💵 Efectivo: ${fmt(sale.splitDetails.cash || 0)}<br/>
+      💳 Tarjeta: ${fmt(sale.splitDetails.card || 0)}<br/>
+      📋 Deudor: ${fmt(sale.splitDetails.debt || 0)}
+    </div>
+  ` : '';
+
+  openModal('📄 Ticket de Venta', `
+    <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;background:var(--bg-card);padding:10px;border-radius:6px;">
+      <b>Fecha:</b> ${fmtDate(sale.date)}<br/>
+      <b>Cajero/a:</b> ${sale.cashier || '-'}<br/>
+      <b>Medio principal:</b> ${sale.payType.toUpperCase()}
+    </div>
+    <div style="margin-bottom:14px">
+      ${itemsHtml}
+    </div>
+    <hr class="divider"/>
+    <div class="cart-total-row"><span>Subtotal</span><span>${fmt(sale.subtotal)}</span></div>
+    ${sale.discountAmt > 0 ? `<div class="cart-total-row"><span>Descuento ${sale.discountPct}%</span><span class="text-green">-${fmt(sale.discountAmt)}</span></div>` : ''}
+    ${sale.surcharge > 0 ? `<div class="cart-total-row"><span>Recargos</span><span class="text-yellow">+${fmt(sale.surcharge)}</span></div>` : ''}
+    <div class="cart-total-row big"><span>TOTAL</span><span class="text-accent">${fmt(sale.totalFinal)}</span></div>
+    ${splitHtml}
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
 

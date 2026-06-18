@@ -122,7 +122,8 @@ const DB = {
         amount: Number(d.amount || 0),
         paid: d.paid,
         date: d.date,
-        paidDate: d.paid_date
+        paidDate: d.paid_date,
+        saleId: d.sale_id
       })));
 
       this.set(this.KEYS.sales, sales.map(s => ({
@@ -450,7 +451,8 @@ const DB = {
         amount: d.amount,
         paid: d.paid,
         date: d.date,
-        paid_date: d.paidDate || null
+        paid_date: d.paidDate || null,
+        sale_id: d.saleId || null
       }).then(({ error }) => { if (error) console.error('Error insertando deuda en Supabase:', error); });
     }
     return d;
