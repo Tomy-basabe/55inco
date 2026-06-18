@@ -1323,14 +1323,84 @@ function saveDebtorFromVenta() {
 }
 
 function openNewProductFromVenta() {
-  openNewProduct();
-  // After save, re-render venta
-  const origSave = window.saveNewProduct;
-  window.saveNewProduct = function() {
-    origSave.call(this);
-    renderView('view-venta');
-    window.saveNewProduct = origSave;
-  };
+  const cats = DB.getCategories();
+  const catOpts = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+  openModal('➕ Crear producto rápido', `
+    <p class="text-muted" style="font-size:13px; margin-bottom:14px;">Creá el producto y se agregará automáticamente al carrito.</p>
+    <div class="form-group">
+      <label>Nombre del producto</label>
+      <input id="qp-name" type="text" placeholder="Ej: Remera blanca talle M" autofocus/>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label>Categoría</label>
+        <select id="qp-cat">
+          <option value="">Seleccionar...</option>
+          ${catOpts}
+          <option value="__new__">+ Nueva categoría</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Precio ($)</label>
+        <input id="qp-price" type="number" placeholder="0" min="0"/>
+      </div>
+    </div>
+    <div id="qp-newcat-container" style="display:none;" class="form-group">
+      <label>Nombre de nueva categoría</label>
+      <input id="qp-newcat-name" type="text" placeholder="Ej: Pantalones"/>
+    </div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-primary" onclick="saveQuickProductFromVenta()">✅ Crear y agregar al carrito</button>
+  `);
+
+  // Show/hide new category field on select change
+  setTimeout(() => {
+    const catSel = el('qp-cat');
+    if (catSel) {
+      catSel.addEventListener('change', function() {
+        const newCatContainer = el('qp-newcat-container');
+        if (this.value === '__new__') {
+          newCatContainer.style.display = 'block';
+          el('qp-newcat-name').focus();
+        } else {
+          newCatContainer.style.display = 'none';
+        }
+      });
+    }
+  }, 50);
+}
+
+function saveQuickProductFromVenta() {
+  const name = el('qp-name').value.trim();
+  let categoryId = el('qp-cat').value;
+  const price = parseFloat(el('qp-price').value) || 0;
+
+  if (!name) { toast('Ingresá el nombre del producto.', 'error'); return; }
+
+  // Create new category if needed
+  if (categoryId === '__new__') {
+    const newCatName = el('qp-newcat-name')?.value.trim();
+    if (!newCatName) { toast('Ingresá un nombre para la nueva categoría.', 'error'); return; }
+    const newCat = DB.addCategory(newCatName);
+    categoryId = newCat.id;
+    toast(`Categoría "${newCatName}" creada.`, 'success');
+  }
+
+  if (!categoryId) { toast('Seleccioná una categoría.', 'error'); return; }
+
+  // Create product with stock=1 (enough to add to cart)
+  const newProd = DB.addProduct({ name, categoryId, talle: '', price, stock: 1 });
+
+  closeModal();
+  toast(`"${name}" creado y agregado al carrito.`, 'success');
+
+  // Re-render view-venta to include the new product in the grid
+  renderView('view-venta');
+
+  // Add to cart after render
+  setTimeout(() => addToCart(newProd.id), 100);
 }
 
 function openEditProductFromVenta(productId) {
