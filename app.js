@@ -230,22 +230,17 @@ el('netflix-pin-form').addEventListener('submit', e => {
     currentUser = selectedProfileUser;
     DB.setSession(selectedProfileUser);
     
-    // Auto-register default hours if cashier logs in
-    if (currentUser.role === 'cajero') {
-      const dateStr = today();
-      const hoursData = DB.getHours();
-      if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
-        const defaultHours = currentUser.defaultHours || 8;
-        DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-        toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
-      }
-    }
-    
-    // Intercept with Cash Box Opening balance if not set for today
     const dateStr = today();
+    const hoursData = DB.getHours();
+    const needsHours = (currentUser.role === 'cajero' && (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined));
     const cashSess = DB.getCashSession(dateStr);
-    
-    if (!cashSess) {
+    const needsCash = !cashSess;
+
+    if (needsHours && needsCash) {
+      promptOpeningCashAndHours(dateStr);
+    } else if (needsHours) {
+      promptOpeningHours(dateStr);
+    } else if (needsCash) {
       promptOpeningCashBox(dateStr);
     } else {
       initApp();
@@ -288,6 +283,73 @@ function saveOpeningCashBox(dateStr) {
   el('modal-overlay').onclick = e => { if (e.target === el('modal-overlay')) closeModal(); };
   closeModal();
   toast(`Caja abierta con un efectivo inicial de ${fmt(openingAmt)}`, 'success');
+  initApp();
+}
+
+function promptOpeningCashAndHours(dateStr) {
+  const defaultHours = currentUser.defaultHours || 8;
+  openModal('📥 Apertura de Caja y Jornada', `
+    <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. Por favor ingresá el efectivo inicial y tus horas a trabajar hoy:</p>
+    <div class="form-group" style="margin-top: 15px;">
+      <label>Efectivo Inicial en Caja ($)</label>
+      <input type="number" id="opening-cash-input" value="0" min="0" style="font-size:24px; font-weight:800; text-align:center;" required autofocus/>
+    </div>
+    <div class="form-group" style="margin-top: 15px;">
+      <label>Horas a trabajar hoy</label>
+      <input type="number" id="opening-hours-input" value="${defaultHours}" min="1" max="24" style="font-size:24px; font-weight:800; text-align:center;" required />
+    </div>
+  `, `
+    <button class="btn btn-primary btn-full" onclick="saveOpeningCashAndHours('${dateStr}')">Iniciar Jornada y Abrir Caja ➔</button>
+  `);
+  el('modal-close').style.display = 'none';
+  el('modal-overlay').onclick = null;
+}
+
+function saveOpeningCashAndHours(dateStr) {
+  const openingAmt = parseFloat(el('opening-cash-input').value)||0;
+  const hours = parseFloat(el('opening-hours-input').value)||8;
+  if (openingAmt < 0 || hours <= 0) { toast('Valores inválidos','error'); return; }
+  
+  DB.setCashSession(dateStr, {
+    openingCash: openingAmt,
+    active: true,
+    openedBy: currentUser.name,
+    openedAt: new Date().toISOString()
+  });
+  DB.setHoursForDay(currentUser.id, dateStr, hours);
+  
+  el('modal-close').style.display = 'block';
+  el('modal-overlay').onclick = e => { if (e.target === el('modal-overlay')) closeModal(); };
+  closeModal();
+  toast(`Caja abierta y jornada de ${hours} hs registrada`, 'success');
+  initApp();
+}
+
+function promptOpeningHours(dateStr) {
+  const defaultHours = currentUser.defaultHours || 8;
+  openModal('🕒 Inicio de Jornada', `
+    <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. ¿Cuántas horas vas a trabajar hoy?</p>
+    <div class="form-group" style="margin-top: 15px;">
+      <label>Horas a trabajar hoy</label>
+      <input type="number" id="opening-hours-input" value="${defaultHours}" min="1" max="24" style="font-size:24px; font-weight:800; text-align:center;" required autofocus/>
+    </div>
+  `, `
+    <button class="btn btn-primary btn-full" onclick="saveOpeningHours('${dateStr}')">Iniciar Jornada ➔</button>
+  `);
+  el('modal-close').style.display = 'none';
+  el('modal-overlay').onclick = null;
+}
+
+function saveOpeningHours(dateStr) {
+  const hours = parseFloat(el('opening-hours-input').value)||8;
+  if (hours <= 0) { toast('Horas inválidas','error'); return; }
+  
+  DB.setHoursForDay(currentUser.id, dateStr, hours);
+  
+  el('modal-close').style.display = 'block';
+  el('modal-overlay').onclick = e => { if (e.target === el('modal-overlay')) closeModal(); };
+  closeModal();
+  toast(`Jornada de ${hours} hs registrada`, 'success');
   initApp();
 }
 
