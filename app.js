@@ -954,6 +954,21 @@ function deleteCat(id) {
 // ══════════════════════════════════════════════════════════
 //  STOCK / PRENDAS
 // ══════════════════════════════════════════════════════════
+function getVariants(p) {
+  return (p.variants && p.variants.length) ? p.variants : [{ label: 'Único', price: p.price, stock: p.stock }];
+}
+function getTotalStock(p) {
+  const v = getVariants(p);
+  return v.reduce((s,x) => s + (x.stock||0), 0);
+}
+function getPriceRange(p) {
+  const v = getVariants(p);
+  const prices = v.map(x => x.price).filter(x => x > 0);
+  if (!prices.length) return fmt(p.price || 0);
+  const mn = Math.min(...prices), mx = Math.max(...prices);
+  return mn === mx ? fmt(mn) : `${fmt(mn)} – ${fmt(mx)}`;
+}
+
 function buildStock() {
   const prods = DB.getProducts();
   const cats = DB.getCategories();
@@ -965,18 +980,29 @@ function buildStock() {
       ${cats.map(c=>`<div class="cat-filter" data-cat="${c.id}">${c.name}</div>`).join('')}
     </div>`;
 
-  const rows = prods.map(p=>`
+  const rows = prods.map(p => {
+    const vars = getVariants(p);
+    const totalStock = getTotalStock(p);
+    const hasMulti = p.variants && p.variants.length > 1;
+    const variantRows = hasMulti ? vars.map(v => `
+      <div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px;">
+        <span style="color:var(--text-2);">${v.label}</span>
+        <span style="font-weight:600;">${fmt(v.price)}</span>
+        <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">${v.stock}</span>
+      </div>
+    `).join('') : '';
+    return `
     <tr data-cat="${p.categoryId}">
-      <td>${p.name}</td>
+      <td><strong>${p.name}</strong>${p.talle ? `<br><small style="color:var(--text-3)">Talle: ${p.talle}</small>` : ''}</td>
       <td>${catMap[p.categoryId]||'-'}</td>
-      <td>${p.talle||'—'}</td>
-      <td>${fmt(p.price)}</td>
-      <td><span class="badge ${p.stock<=2?'badge-red':p.stock<=5?'badge-yellow':'badge-green'}">${p.stock}</span></td>
+      <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : fmt(vars[0].price)}</td>
+      <td><span class="badge ${totalStock<=2?'badge-red':totalStock<=5?'badge-yellow':'badge-green'}">${hasMulti ? totalStock + ' total' : totalStock}</span></td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="openEditProduct('${p.id}')">✏️</button>
         <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   return `
   <div class="view-header">
@@ -989,8 +1015,8 @@ function buildStock() {
   ${filterBar}
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Prenda</th><th>Categoría</th><th>Talle</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
-      <tbody id="stock-tbody">${rows||'<tr><td colspan="6" style="text-align:center;color:var(--text-3)">Sin prendas</td></tr>'}</tbody>
+      <thead><tr><th>Prenda</th><th>Categoría</th><th>Precio / Variantes</th><th>Stock</th><th>Acciones</th></tr></thead>
+      <tbody id="stock-tbody">${rows||'<tr><td colspan="5" style="text-align:center;color:var(--text-3)">Sin prendas</td></tr>'}</tbody>
     </table>
   </div>`;
 }
@@ -1008,6 +1034,44 @@ function bindStock() {
   });
 }
 
+function variantRowHtml(idx, label, price, stock) {
+  return `
+  <div class="variant-row" data-idx="${idx}" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;background:var(--bg3);border-radius:var(--r-sm);border:1px solid var(--border);">
+    <div class="form-group" style="margin:0;flex:1.2;">
+      <label style="font-size:11px;">Etiqueta</label>
+      <input class="vr-label" type="text" value="${label}" placeholder="Ej: Mayorista, Minorista" style="font-size:13px;"/>
+    </div>
+    <div class="form-group" style="margin:0;flex:1;">
+      <label style="font-size:11px;">Precio ($)</label>
+      <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;"/>
+    </div>
+    <div class="form-group" style="margin:0;flex:0.7;">
+      <label style="font-size:11px;">Stock</label>
+      <input class="vr-stock" type="number" value="${stock}" min="0" style="font-size:13px;"/>
+    </div>
+    <button class="btn btn-danger btn-sm btn-icon" onclick="this.closest('.variant-row').remove()" style="margin-top:14px;" title="Quitar">✕</button>
+  </div>`;
+}
+
+function addVariantRow(containerId) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  const idx = c.querySelectorAll('.variant-row').length;
+  c.insertAdjacentHTML('beforeend', variantRowHtml(idx, '', 0, 0));
+}
+
+function collectVariants(containerId) {
+  const rows = document.querySelectorAll(`#${containerId} .variant-row`);
+  const variants = [];
+  rows.forEach(row => {
+    const label = row.querySelector('.vr-label').value.trim() || `Precio ${variants.length+1}`;
+    const price = parseFloat(row.querySelector('.vr-price').value) || 0;
+    const stock = parseInt(row.querySelector('.vr-stock').value) || 0;
+    variants.push({ label, price, stock });
+  });
+  return variants;
+}
+
 function openNewProduct(prefillCatId) {
   const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===prefillCatId?'selected':''}>${c.name}</option>`).join('');
@@ -1023,16 +1087,22 @@ function openNewProduct(prefillCatId) {
       </div>
       <div class="form-group"><label>Talle (opcional)</label><input id="np-talle" type="text" placeholder="S / M / L / 38 …"/></div>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Precio ($)</label><input id="np-price" type="number" placeholder="0"/></div>
-      <div class="form-group"><label>Stock inicial</label><input id="np-stock" type="number" placeholder="0"/></div>
+
+    <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:700;font-size:14px;">💰 Precios y Stock</span>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('np-variants')">➕ Agregar precio</button>
+      </div>
+      <div id="np-variants">
+        ${variantRowHtml(0, 'Precio único', 0, 0)}
+      </div>
+      <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Podés agregar varios precios (ej: Mayorista, Minorista) con stock independiente para cada uno.</p>
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveNewProduct()">Guardar</button>
   `);
 
-  // Pre-fill if there's a category pre-selected
   if (prefillCatId) {
     const cat = cats.find(c => c.id === prefillCatId);
     if (cat) setTimeout(() => { const n = el('np-name'); if (n && !n.value) n.value = cat.name; }, 50);
@@ -1062,10 +1132,12 @@ function saveNewProduct() {
   const name = el('np-name').value.trim();
   const categoryId = el('np-cat').value;
   const talle = el('np-talle').value.trim();
-  const price = parseFloat(el('np-price').value)||0;
-  const stock = parseInt(el('np-stock').value)||0;
+  const variants = collectVariants('np-variants');
   if (!name || !categoryId) { toast('Nombre y categoría son requeridos.','error'); return; }
-  DB.addProduct({ name, categoryId, talle, price, stock });
+  if (!variants.length) { toast('Agregá al menos un precio.','error'); return; }
+  const price = variants[0].price;
+  const stock = variants.reduce((s,v) => s + v.stock, 0);
+  DB.addProduct({ name, categoryId, talle, price, stock, variants: variants.length > 1 ? variants : [] });
   closeModal(); toast('Prenda agregada.','success');
   renderView('view-stock');
 }
@@ -1075,6 +1147,8 @@ function openEditProduct(id) {
   if (!p) return;
   const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('');
+  const vars = getVariants(p);
+  const variantRowsHtml = vars.map((v, i) => variantRowHtml(i, v.label, v.price, v.stock)).join('');
   openModal('Editar Prenda', `
     <div class="form-group"><label>Nombre</label><input id="ep-name" type="text" value="${p.name}"/></div>
     <div class="form-row cols-2">
@@ -1083,9 +1157,14 @@ function openEditProduct(id) {
       </div>
       <div class="form-group"><label>Talle</label><input id="ep-talle" type="text" value="${p.talle||''}"/></div>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Precio ($)</label><input id="ep-price" type="number" value="${p.price}"/></div>
-      <div class="form-group"><label>Stock</label><input id="ep-stock" type="number" value="${p.stock}"/></div>
+    <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-top:8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span style="font-weight:700;font-size:14px;">💰 Precios y Stock</span>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('ep-variants')">➕ Agregar precio</button>
+      </div>
+      <div id="ep-variants">
+        ${variantRowsHtml}
+      </div>
     </div>
   `, `
     <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteProduct('${id}'); closeModal();">🗑️ Eliminar</button>
@@ -1098,10 +1177,12 @@ function saveEditProduct(id) {
   const name = el('ep-name').value.trim();
   const categoryId = el('ep-cat').value;
   const talle = el('ep-talle').value.trim();
-  const price = parseFloat(el('ep-price').value)||0;
-  const stock = parseInt(el('ep-stock').value)||0;
+  const variants = collectVariants('ep-variants');
   if (!name) { toast('El nombre es requerido.','error'); return; }
-  DB.updateProduct(id, { name, categoryId, talle, price, stock });
+  if (!variants.length) { toast('Agregá al menos un precio.','error'); return; }
+  const price = variants[0].price;
+  const stock = variants.reduce((s,v) => s + v.stock, 0);
+  DB.updateProduct(id, { name, categoryId, talle, price, stock, variants: variants.length > 1 ? variants : [] });
   closeModal(); toast('Prenda actualizada.','success');
   renderView('view-stock');
 }
@@ -1136,14 +1217,17 @@ function buildVenta() {
 
   const productCards = prods.map(p => {
     const cat = cats.find(c=>c.id===p.categoryId);
+    const hasMulti = p.variants && p.variants.length > 1;
+    const totalStock = getTotalStock(p);
+    const priceDisplay = hasMulti ? getPriceRange(p) : fmt(getVariants(p)[0].price);
     return `
     <div class="product-card" data-id="${p.id}" data-cat="${p.categoryId}" onclick="addToCart('${p.id}')">
       <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation(); openEditProductFromVenta('${p.id}')" style="position: absolute; top: 8px; right: 8px; font-size: 11px; z-index: 10; opacity: 0.7;" title="Editar Prenda">✏️</button>
       <div class="product-cat">${cat?.name||'Sin categoría'}</div>
       <div class="product-name" style="padding-right: 20px;">${p.name}</div>
       ${p.talle ? `<div class="product-talle">Talle: ${p.talle}</div>` : ''}
-      <div class="product-price">${fmt(p.price)}</div>
-      <div class="product-stock">Stock: ${p.stock}</div>
+      <div class="product-price">${priceDisplay}</div>
+      <div class="product-stock">Stock: ${totalStock}${hasMulti ? ` <span style="font-size:10px;color:var(--accent);">(${p.variants.length} precios)</span>` : ''}</div>
     </div>`;
   }).join('');
 
@@ -1311,26 +1395,66 @@ function filterVentaProducts() {
   });
 }
 
-function addToCart(productId) {
+function addToCart(productId, variantIdx) {
   const p = DB.getProducts().find(x=>x.id===productId);
   if (!p) return;
-  if (p.stock <= 0) { toast('Sin stock disponible.','error'); return; }
-  const existing = cart.find(c=>c.productId===productId);
+  const hasMulti = p.variants && p.variants.length > 1;
+
+  // If product has multiple variants and no variant was selected, show picker
+  if (hasMulti && variantIdx === undefined) {
+    openVariantPicker(p);
+    return;
+  }
+
+  // Determine price and stock based on variant
+  let selectedPrice, maxStock, variantLabel;
+  if (hasMulti && variantIdx !== undefined) {
+    const v = p.variants[variantIdx];
+    selectedPrice = v.price;
+    maxStock = v.stock;
+    variantLabel = v.label;
+  } else {
+    const v = getVariants(p);
+    selectedPrice = v[0].price;
+    maxStock = v[0].stock;
+    variantLabel = null;
+  }
+
+  if (maxStock <= 0) { toast('Sin stock disponible.','error'); return; }
+
+  // Cart key includes variant to keep them separate
+  const cartKey = hasMulti ? `${productId}__v${variantIdx}` : productId;
+  const existing = cart.find(c => c.cartKey === cartKey);
   if (existing) {
-    if (existing.qty >= p.stock) { toast('Stock máximo alcanzado.','error'); return; }
+    if (existing.qty >= maxStock) { toast('Stock máximo alcanzado.','error'); return; }
     existing.qty++;
   } else {
-    cart.push({ productId, qty: 1, customPrice: p.price });
+    cart.push({ productId, cartKey, qty: 1, customPrice: selectedPrice, variantIdx: hasMulti ? variantIdx : undefined, variantLabel });
   }
   renderCartItems();
-  // Visual feedback
   const card = document.querySelector(`.product-card[data-id="${productId}"]`);
   if (card) { card.classList.add('selected'); setTimeout(()=>card.classList.remove('selected'),600); }
-  toast(`${p.name} agregado al carrito.`, 'success');
+  toast(`${p.name}${variantLabel ? ' ('+variantLabel+')' : ''} agregado al carrito.`, 'success');
 }
 
-function removeFromCart(productId) {
-  cart = cart.filter(c=>c.productId!==productId);
+function openVariantPicker(p) {
+  const btns = p.variants.map((v, i) => `
+    <button class="btn btn-secondary" style="display:flex;justify-content:space-between;width:100%;padding:12px 16px;margin-bottom:6px;" onclick="closeModal(); addToCart('${p.id}', ${i})">
+      <span style="font-weight:700;">${v.label}</span>
+      <span style="display:flex;gap:12px;align-items:center;">
+        <span style="font-weight:800;color:var(--accent);">${fmt(v.price)}</span>
+        <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">Stock: ${v.stock}</span>
+      </span>
+    </button>
+  `).join('');
+  openModal(`💰 ${p.name} – Elegí el precio`, `
+    <p class="text-muted" style="font-size:13px;margin-bottom:12px;">Este producto tiene varios precios. Seleccioná cuál agregar al carrito:</p>
+    ${btns}
+  `, '');
+}
+
+function removeFromCart(cartKey) {
+  cart = cart.filter(c => (c.cartKey || c.productId) !== cartKey);
   renderCartItems();
 }
 
@@ -1353,23 +1477,25 @@ function renderCartItems() {
   list.innerHTML = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
     if (!p) return '';
+    const ck = c.cartKey || c.productId;
+    const maxStock = (c.variantIdx !== undefined && p.variants && p.variants[c.variantIdx]) ? p.variants[c.variantIdx].stock : (p.stock || 99);
     return `
     <div class="cart-item">
       <div style="flex:1">
         <div class="cart-item-name">${p.name}</div>
-        <div style="font-size:11px;color:var(--text-3)">${p.talle||''}</div>
+        <div style="font-size:11px;color:var(--text-3)">${c.variantLabel ? `<span class="badge badge-purple" style="font-size:10px;">${c.variantLabel}</span> ` : ''}${p.talle||''}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="changeQty('${c.productId}',-1)">−</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="changeQty('${ck}',-1)">−</button>
           <span style="font-size:13px;font-weight:600;min-width:20px;text-align:center">${c.qty}</span>
-          <button class="btn btn-ghost btn-sm btn-icon" onclick="changeQty('${c.productId}',1)">+</button>
+          <button class="btn btn-ghost btn-sm btn-icon" onclick="changeQty('${ck}',1)">+</button>
         </div>
       </div>
       <div style="text-align:right">
         <div class="cart-item-price" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-bottom:2px;">
-          $ <input type="number" class="input-sm" style="width:70px;text-align:right;padding:2px 4px;font-size:13px;" value="${c.customPrice !== undefined ? c.customPrice : p.price}" onchange="updateCartItemPrice('${c.productId}', this.value)">
+          $ <input type="number" class="input-sm" style="width:70px;text-align:right;padding:2px 4px;font-size:13px;" value="${c.customPrice !== undefined ? c.customPrice : p.price}" onchange="updateCartItemPrice('${ck}', this.value)">
         </div>
         <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Sub: ${fmt((c.customPrice !== undefined ? c.customPrice : p.price)*c.qty)}</div>
-        <button class="cart-item-remove" onclick="removeFromCart('${c.productId}')">×</button>
+        <button class="cart-item-remove" onclick="removeFromCart('${ck}')">×</button>
       </div>
     </div>`;
   }).join('');
@@ -1377,16 +1503,17 @@ function renderCartItems() {
   updateCartTotals();
 }
 
-function changeQty(productId, delta) {
-  const item = cart.find(c=>c.productId===productId);
+function changeQty(cartKey, delta) {
+  const item = cart.find(c => (c.cartKey || c.productId) === cartKey);
   if (!item) return;
-  const p = DB.getProducts().find(x=>x.id===productId);
-  item.qty = Math.max(1, Math.min(item.qty + delta, p?.stock||99));
+  const p = DB.getProducts().find(x => x.id === item.productId);
+  const maxStock = (item.variantIdx !== undefined && p?.variants && p.variants[item.variantIdx]) ? p.variants[item.variantIdx].stock : (p?.stock || 99);
+  item.qty = Math.max(1, Math.min(item.qty + delta, maxStock));
   renderCartItems();
 }
 
-function updateCartItemPrice(productId, newPrice) {
-  const item = cart.find(c => c.productId === productId);
+function updateCartItemPrice(cartKey, newPrice) {
+  const item = cart.find(c => (c.cartKey || c.productId) === cartKey);
   if (!item) return;
   const parsed = parseFloat(newPrice);
   if (!isNaN(parsed) && parsed >= 0) {
