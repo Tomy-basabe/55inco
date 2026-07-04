@@ -22,6 +22,7 @@ const DB = {
     expenses:   '5inco_expenses',
     fixedExpenses:'5inco_fixed_expenses',
     cashSession: '5inco_cash_session',
+    audit:      '5inco_audit',
   },
 
   // ── Generic helpers ───────────────────
@@ -176,8 +177,8 @@ const DB = {
   async seedSupabase() {
     const users = [
       { id: 'u1', name: 'Andrea Tuta', username: 'andrea', password: '2812', role: 'jefe' },
-      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 8 },
-      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 8 },
+      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
+      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
     ];
     const categories = [
       { id: 'c1', name: 'Remeras' },
@@ -224,8 +225,8 @@ const DB = {
 
     const users = [
       { id: 'u1', name: 'Andrea Tuta', username: 'andrea', password: '2812', role: 'jefe' },
-      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 8 },
-      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 8 },
+      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
+      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
     ];
 
     if (!localStorage.getItem('5inco_seeded')) {
@@ -263,6 +264,26 @@ const DB = {
     }
   },
 
+  // ── Audit Log ─────────────────────────
+  getAuditLog() { return this.get(this.KEYS.audit); },
+  addAuditLog(action, description, details = {}) {
+    const logs = this.getAuditLog();
+    const session = this.getSession();
+    const entry = {
+      id: this.id(),
+      date: new Date().toISOString(),
+      userId: session ? session.id : 'system',
+      userName: session ? session.name : 'Sistema',
+      action,
+      description,
+      details
+    };
+    logs.push(entry);
+    // Keep max 2000 entries
+    if (logs.length > 2000) logs.splice(0, logs.length - 2000);
+    this.set(this.KEYS.audit, logs);
+  },
+
   // ── Session ───────────────────────────
   getSession() { return this.getObj(this.KEYS.session); },
   setSession(user) { this.set(this.KEYS.session, user); },
@@ -297,7 +318,7 @@ const DB = {
     const cats = this.getCategories();
     const cat = { id: this.id(), name };
     cats.push(cat); this.set(this.KEYS.categories, cats);
-
+    this.addAuditLog('category_create', `Categoría creada: "${name}"`, { catId: cat.id, name });
     if (this.supabase) {
       this.supabase.from('categories').insert(cat)
         .then(({ error }) => { if (error) console.error('Error insertando categoría en Supabase:', error); });
@@ -305,15 +326,19 @@ const DB = {
     return cat;
   },
   deleteCategory(id) {
+    const cat = this.getCategories().find(c => c.id === id);
     this.set(this.KEYS.categories, this.getCategories().filter(c => c.id !== id));
+    this.addAuditLog('category_delete', `Categoría eliminada: "${cat ? cat.name : id}"`, { catId: id });
     if (this.supabase) {
       this.supabase.from('categories').delete().eq('id', id)
         .then(({ error }) => { if (error) console.error('Error eliminando categoría en Supabase:', error); });
     }
   },
   updateCategory(id, name) {
+    const old = this.getCategories().find(c => c.id === id);
     const cats = this.getCategories().map(c => c.id === id ? { ...c, name } : c);
     this.set(this.KEYS.categories, cats);
+    this.addAuditLog('category_update', `Categoría renombrada: "${old ? old.name : id}" → "${name}"`, { catId: id, oldName: old?.name, newName: name });
     if (this.supabase) {
       this.supabase.from('categories').update({ name }).eq('id', id)
         .then(({ error }) => { if (error) console.error('Error actualizando categoría en Supabase:', error); });
@@ -326,7 +351,7 @@ const DB = {
     const prods = this.getProducts();
     const p = { id: this.id(), ...data };
     prods.push(p); this.set(this.KEYS.products, prods);
-
+    this.addAuditLog('product_create', `Prenda creada: "${p.name}" (${p.talle || 'sin talle'}) – Stock: ${p.stock} – Precio: $${p.price}`, { productId: p.id, name: p.name, talle: p.talle, price: p.price, stock: p.stock });
     if (this.supabase) {
       this.supabase.from('products').insert({
         id: p.id,
@@ -340,9 +365,11 @@ const DB = {
     return p;
   },
   updateProduct(id, data) {
+    const old = this.getProducts().find(p => p.id === id);
     const prods = this.getProducts().map(p => p.id === id ? { ...p, ...data } : p);
     this.set(this.KEYS.products, prods);
-
+    const updated = prods.find(p => p.id === id);
+    this.addAuditLog('product_update', `Prenda editada: "${updated?.name || id}"`, { productId: id, old, new: updated });
     if (this.supabase) {
       const p = prods.find(x => x.id === id);
       if (p) {
@@ -357,7 +384,9 @@ const DB = {
     }
   },
   deleteProduct(id) {
+    const prod = this.getProducts().find(p => p.id === id);
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));
+    this.addAuditLog('product_delete', `Prenda eliminada: "${prod ? prod.name : id}"`, { productId: id, name: prod?.name });
     if (this.supabase) {
       this.supabase.from('products').delete().eq('id', id)
         .then(({ error }) => { if (error) console.error('Error eliminando producto en Supabase:', error); });
@@ -370,7 +399,7 @@ const DB = {
     const sales = this.getSales();
     const s = { id: this.id(), date: new Date().toISOString(), ...sale };
     sales.push(s); this.set(this.KEYS.sales, sales);
-
+    this.addAuditLog('sale_create', `Venta registrada – ${s.payType} – Total: $${s.totalFinal}`, { saleId: s.id, total: s.totalFinal, payType: s.payType });
     if (this.supabase) {
       const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
       this.supabase.from('sales').insert({
@@ -388,9 +417,11 @@ const DB = {
   updateSale(id, data) {
     const sales = this.getSales().map(s => s.id === id ? { ...s, ...data } : s);
     this.set(this.KEYS.sales, sales);
-
+    const s = sales.find(x => x.id === id);
+    if (data.returned) {
+      this.addAuditLog('sale_return', `Venta devuelta – Total: $${s?.totalFinal || '?'}`, { saleId: id });
+    }
     if (this.supabase) {
-      const s = sales.find(x => x.id === id);
       if (s) {
         const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
         this.supabase.from('sales').update({
@@ -410,7 +441,7 @@ const DB = {
     const debtors = this.getDebtors();
     const d = { id: this.id(), surcharge: 0, ...data };
     debtors.push(d); this.set(this.KEYS.debtors, debtors);
-
+    this.addAuditLog('debtor_create', `Deudor creado: "${d.name}"`, { debtorId: d.id, name: d.name, phone: d.phone });
     if (this.supabase) {
       this.supabase.from('debtors').insert(d)
         .then(({ error }) => { if (error) console.error('Error insertando deudor en Supabase:', error); });
@@ -418,9 +449,10 @@ const DB = {
     return d;
   },
   updateDebtor(id, data) {
+    const old = this.getDebtors().find(d => d.id === id);
     const debtors = this.getDebtors().map(d => d.id === id ? { ...d, ...data } : d);
     this.set(this.KEYS.debtors, debtors);
-
+    this.addAuditLog('debtor_update', `Deudor editado: "${old ? old.name : id}"`, { debtorId: id });
     if (this.supabase) {
       const d = debtors.find(x => x.id === id);
       if (d) {
@@ -430,7 +462,9 @@ const DB = {
     }
   },
   deleteDebtor(id) {
+    const deb = this.getDebtors().find(d => d.id === id);
     this.set(this.KEYS.debtors, this.getDebtors().filter(d => d.id !== id));
+    this.addAuditLog('debtor_delete', `Deudor eliminado: "${deb ? deb.name : id}"`, { debtorId: id });
     if (this.supabase) {
       this.supabase.from('debtors').delete().eq('id', id)
         .then(({ error }) => { if (error) console.error('Error eliminando deudor de Supabase:', error); });
@@ -459,9 +493,11 @@ const DB = {
   },
   payDebt(id) {
     const dateStr = new Date().toISOString();
+    const debt = this.getDebts().find(d => d.id === id);
     const debts = this.getDebts().map(d => d.id === id ? { ...d, paid: true, paidDate: dateStr } : d);
     this.set(this.KEYS.debts, debts);
-
+    const debtor = debt ? this.getDebtors().find(d => d.id === debt.debtorId) : null;
+    this.addAuditLog('debt_paid', `Deuda cobrada – ${debtor ? debtor.name : 'Deudor'} – $${debt ? debt.amount : '?'}`, { debtId: id, amount: debt?.amount, debtorName: debtor?.name });
     if (this.supabase) {
       this.supabase.from('debts').update({
         paid: true,
@@ -476,12 +512,17 @@ const DB = {
 
   // ── Hours ─────────────────────────────
   getHours() { return this.getObj(this.KEYS.hours); },
-  setHoursForDay(userId, date, hours) {
+  setHoursForDay(userId, date, hours, silent = false) {
     const h = this.getHours();
+    const prev = h[userId] ? h[userId][date] : undefined;
     if (!h[userId]) h[userId] = {};
     h[userId][date] = hours;
     this.set(this.KEYS.hours, h);
-
+    if (!silent) {
+      const users = this.getUsers();
+      const u = users.find(x => x.id === userId);
+      this.addAuditLog('hours_adjust', `Horas ajustadas – ${u ? u.name : userId} – ${date}: ${prev !== undefined ? prev + 'h → ' : ''}${hours}h`, { userId, date, prev, new: hours });
+    }
     if (this.supabase) {
       this.supabase.from('hours').upsert({
         user_id: userId,
@@ -515,7 +556,7 @@ const DB = {
     const expenses = this.getExpenses();
     const e = { id: this.id(), date: new Date().toISOString(), ...data };
     expenses.push(e); this.set(this.KEYS.expenses, expenses);
-
+    this.addAuditLog('expense_create', `Gasto registrado – $${e.amount} – ${e.description || e.detail || 'Sin descripción'}`, { expenseId: e.id, amount: e.amount, description: e.description || e.detail });
     if (this.supabase) {
       this.supabase.from('expenses').insert({
         id: e.id,
@@ -527,7 +568,9 @@ const DB = {
     return e;
   },
   deleteExpense(id) {
+    const exp = this.getExpenses().find(e => e.id === id);
     this.set(this.KEYS.expenses, this.getExpenses().filter(e => e.id !== id));
+    this.addAuditLog('expense_delete', `Gasto eliminado – $${exp ? exp.amount : '?'} – ${exp?.description || exp?.detail || ''}`, { expenseId: id });
     if (this.supabase) {
       this.supabase.from('expenses').delete().eq('id', id)
         .then(({ error }) => { if (error) console.error('Error eliminando gasto en Supabase:', error); });
@@ -570,9 +613,12 @@ const DB = {
   },
   setCashSession(dateStr, data) {
     const sessions = this.getObj(this.KEYS.cashSession);
+    const isNew = !sessions[dateStr];
     sessions[dateStr] = data;
     this.set(this.KEYS.cashSession, sessions);
-
+    if (isNew) {
+      this.addAuditLog('cash_open', `Apertura de caja – Efectivo inicial: $${data.openingCash}`, { date: dateStr, openingCash: data.openingCash, openedBy: data.openedBy });
+    }
     if (this.supabase) {
       this.supabase.from('cash_sessions').upsert({
         date: dateStr,
@@ -581,6 +627,26 @@ const DB = {
         opened_by: data.openedBy,
         opened_at: data.openedAt
       }).then(({ error }) => { if (error) console.error('Error guardando sesión de caja en Supabase:', error); });
+    }
+  },
+
+  // ── Users audit hook ──────────────────
+  saveUsersWithAudit(users, actionDesc) {
+    this.set(this.KEYS.users, users);
+    this.addAuditLog('user_update', actionDesc, {});
+    if (this.supabase) {
+      const promises = users.map(user =>
+        this.supabase.from('users').upsert({
+          id: user.id,
+          name: user.name,
+          username: user.username,
+          password: user.password,
+          role: user.role,
+          salary_hour: user.salaryHour,
+          default_hours: user.defaultHours
+        })
+      );
+      Promise.all(promises).catch(err => console.error('Error sincronizando usuarios:', err));
     }
   },
 };

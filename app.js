@@ -287,7 +287,7 @@ function saveOpeningCashBox(dateStr) {
 }
 
 function promptOpeningCashAndHours(dateStr) {
-  const defaultHours = currentUser.defaultHours || 8;
+  const defaultHours = currentUser.defaultHours || 3.5;
   openModal('📥 Apertura de Caja y Jornada', `
     <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. Por favor ingresá el efectivo inicial y tus horas a trabajar hoy:</p>
     <div class="form-group" style="margin-top: 15px;">
@@ -307,7 +307,7 @@ function promptOpeningCashAndHours(dateStr) {
 
 function saveOpeningCashAndHours(dateStr) {
   const openingAmt = parseFloat(el('opening-cash-input').value)||0;
-  const hours = parseFloat(el('opening-hours-input').value)||8;
+  const hours = parseFloat(el('opening-hours-input').value)||3.5;
   if (openingAmt < 0 || hours <= 0) { toast('Valores inválidos','error'); return; }
   
   DB.setCashSession(dateStr, {
@@ -326,7 +326,7 @@ function saveOpeningCashAndHours(dateStr) {
 }
 
 function promptOpeningHours(dateStr) {
-  const defaultHours = currentUser.defaultHours || 8;
+  const defaultHours = currentUser.defaultHours || 3.5;
   openModal('🕒 Inicio de Jornada', `
     <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. ¿Cuántas horas vas a trabajar hoy?</p>
     <div class="form-group" style="margin-top: 15px;">
@@ -341,7 +341,7 @@ function promptOpeningHours(dateStr) {
 }
 
 function saveOpeningHours(dateStr) {
-  const hours = parseFloat(el('opening-hours-input').value)||8;
+  const hours = parseFloat(el('opening-hours-input').value)||3.5;
   if (hours <= 0) { toast('Horas inválidas','error'); return; }
   
   DB.setHoursForDay(currentUser.id, dateStr, hours);
@@ -451,6 +451,9 @@ function renderSidebar() {
       { view: 'view-categorias',icon: '🏷️',  label: 'Categorías' },
       { view: 'view-gastos',    icon: '💸',  label: 'Gastos y Caja' },
     ]);
+    html += navSection('Reportes', [
+      { view: 'view-historico-admin', icon: '🕵️', label: 'Historial Completo' },
+    ]);
   }
   
   const ventasItems = [
@@ -558,10 +561,11 @@ function closeMobileSidebar() {
 function renderMainContent() {
   el('main-content').innerHTML = `
     ${currentUser.role === 'jefe' ? `
-    <div class="view" id="view-dashboard">${buildDashboard()}</div>
+    <div class="view" id="view-dashboard"></div>
     <div class="view" id="view-empleados"></div>
     <div class="view" id="view-stock"></div>
     <div class="view" id="view-categorias"></div>
+    <div class="view" id="view-historico-admin"></div>
     ` : ''}
     <div class="view" id="view-gastos"></div>
     <div class="view" id="view-venta"></div>
@@ -570,7 +574,7 @@ function renderMainContent() {
   `;
   // Render all views
   const views = ['view-venta','view-historial','view-deudores', 'view-gastos'];
-  if (currentUser.role === 'jefe') views.push('view-empleados','view-stock','view-categorias');
+  if (currentUser.role === 'jefe') views.push('view-dashboard','view-empleados','view-stock','view-categorias','view-historico-admin');
   views.forEach(v => renderView(v));
 }
 
@@ -578,14 +582,15 @@ function renderView(v) {
   const el2 = el(v);
   if (!el2) return;
   switch(v) {
-    case 'view-dashboard':  el2.innerHTML = buildDashboard(); bindDashboard(); break;
-    case 'view-empleados':  el2.innerHTML = buildEmpleados(); bindEmpleados(); break;
-    case 'view-stock':      el2.innerHTML = buildStock(); bindStock(); break;
-    case 'view-categorias': el2.innerHTML = buildCategorias(); bindCategorias(); break;
-    case 'view-venta':      el2.innerHTML = buildVenta(); bindVenta(); break;
-    case 'view-historial':  el2.innerHTML = buildHistorial(); break;
-    case 'view-deudores':   el2.innerHTML = buildDeudores(); bindDeudores(); break;
-    case 'view-gastos':     el2.innerHTML = buildGastos(); bindGastos(); break;
+    case 'view-dashboard':        el2.innerHTML = buildDashboard(); bindDashboard(); break;
+    case 'view-empleados':         el2.innerHTML = buildEmpleados(); bindEmpleados(); break;
+    case 'view-stock':             el2.innerHTML = buildStock(); bindStock(); break;
+    case 'view-categorias':        el2.innerHTML = buildCategorias(); bindCategorias(); break;
+    case 'view-venta':             el2.innerHTML = buildVenta(); bindVenta(); break;
+    case 'view-historial':         el2.innerHTML = buildHistorial(); break;
+    case 'view-deudores':          el2.innerHTML = buildDeudores(); bindDeudores(); break;
+    case 'view-gastos':            el2.innerHTML = buildGastos(); bindGastos(); break;
+    case 'view-historico-admin':   el2.innerHTML = buildHistoricoAdmin(); bindHistoricoAdmin(); break;
   }
 }
 
@@ -745,7 +750,7 @@ function saveNuevoEmpleado() {
   const users = DB.getUsers();
   if (users.find(u=>u.username===username)) { toast('Ya existe ese usuario.','error'); return; }
   const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours };
-  users.push(newUser); DB.saveUsers(users);
+  users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${name}"`);
   closeModal(); toast('Empleado creado.','success');
   renderView('view-empleados');
 }
@@ -777,7 +782,7 @@ function saveEmpleadoEdit(id) {
   if (!name) { toast('El nombre es requerido.','error'); return; }
   users[idx] = { ...users[idx], name, salaryHour, defaultHours };
   if (pass) users[idx].password = pass;
-  DB.saveUsers(users);
+  DB.saveUsersWithAudit(users, `Empleado editado: "${name}"`);
   closeModal(); toast('Empleado actualizado.','success');
   renderView('view-empleados');
 }
@@ -2460,10 +2465,67 @@ function buildGastos() {
         </tbody>
       </table>
     </div>
+  </div>
+
+  ${!jefe ? (() => {
+    const hoursToday = (() => {
+      const h = DB.getHours();
+      return h[currentUser.id] && h[currentUser.id][dateStr] !== undefined ? h[currentUser.id][dateStr] : (currentUser.defaultHours || 3.5);
+    })();
+    return `
+  <div class="section">
+    <div class="section-header"><span class="section-title">⏰ Mis Horas de Hoy</span></div>
+    <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <div style="font-size:12px;color:var(--text-3);font-weight:700;text-transform:uppercase;">Horas cargadas hoy</div>
+          <div id="my-hours-display" style="font-size:36px;font-weight:800;color:var(--accent);margin-top:2px;">${hoursToday}h</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-ghost btn-sm" onclick="adjustMyHours(-0.5)">- 0.5h</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustMyHours(-1)">- 1h</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustMyHours(1)">+ 1h</button>
+          <button class="btn btn-ghost btn-sm" onclick="adjustMyHours(0.5)">+ 0.5h</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="form-group" style="margin:0;flex:1;">
+          <label style="font-size:12px;">Establecer valor exacto</label>
+          <input id="my-hours-manual" type="number" min="0" max="24" step="0.5" value="${hoursToday}" style="font-size:18px;font-weight:700;text-align:center;"/>
+        </div>
+        <button class="btn btn-primary" style="margin-bottom:0;" onclick="saveMyHoursManual()">Guardar</button>
+      </div>
+    </div>
   </div>`;
+  })() : ''}
+
+  `;
 }
 
 function bindGastos() {}
+
+function adjustMyHours(delta) {
+  const dateStr = today();
+  const h = DB.getHours();
+  const current = (h[currentUser.id] && h[currentUser.id][dateStr] !== undefined) ? h[currentUser.id][dateStr] : (currentUser.defaultHours || 3.5);
+  const newVal = Math.max(0, Math.round((current + delta) * 10) / 10);
+  DB.setHoursForDay(currentUser.id, dateStr, newVal);
+  const disp = document.getElementById('my-hours-display');
+  const input = document.getElementById('my-hours-manual');
+  if (disp) disp.textContent = newVal + 'h';
+  if (input) input.value = newVal;
+  toast(`Horas actualizadas: ${newVal}h`, 'success');
+}
+
+function saveMyHoursManual() {
+  const val = parseFloat(document.getElementById('my-hours-manual')?.value);
+  if (isNaN(val) || val < 0) { toast('Valor inválido', 'error'); return; }
+  const dateStr = today();
+  DB.setHoursForDay(currentUser.id, dateStr, val);
+  const disp = document.getElementById('my-hours-display');
+  if (disp) disp.textContent = val + 'h';
+  toast(`Horas guardadas: ${val}h`, 'success');
+}
 
 function openWithdrawCash() {
   openModal('💸 Sacar Plata de Caja (Retiro)', `
@@ -2659,6 +2721,155 @@ function deleteExpenseConfirm(id) {
   DB.deleteExpense(id);
   toast('Gasto eliminado.','success');
   renderView('view-gastos');
+}
+
+// ══════════════════════════════════════════════════════════
+//  HISTORIAL COMPLETO (solo jefes)
+// ══════════════════════════════════════════════════════════
+
+const AUDIT_LABELS = {
+  sale_create:      { icon: '🛒', label: 'Venta' },
+  sale_return:      { icon: '🔄', label: 'Devolución' },
+  expense_create:   { icon: '💸', label: 'Gasto' },
+  expense_delete:   { icon: '🗑️', label: 'Gasto Eliminado' },
+  category_create:  { icon: '🏷️', label: 'Cat. Creada' },
+  category_update:  { icon: '✏️', label: 'Cat. Editada' },
+  category_delete:  { icon: '🗑️', label: 'Cat. Eliminada' },
+  product_create:   { icon: '👗', label: 'Prenda Creada' },
+  product_update:   { icon: '✏️', label: 'Prenda Editada' },
+  product_delete:   { icon: '🗑️', label: 'Prenda Eliminada' },
+  debtor_create:    { icon: '👤', label: 'Deudor Creado' },
+  debtor_update:    { icon: '✏️', label: 'Deudor Editado' },
+  debtor_delete:    { icon: '🗑️', label: 'Deudor Eliminado' },
+  debt_paid:        { icon: '✅', label: 'Deuda Cobrada' },
+  hours_adjust:     { icon: '🕐', label: 'Horas Ajust.' },
+  cash_open:        { icon: '📥', label: 'Apertura Caja' },
+  user_update:      { icon: '👥', label: 'Empleado' },
+};
+
+function buildHistoricoAdmin() {
+  const allLogs = DB.getAuditLog().slice().reverse();
+  const users = DB.getUsers();
+  const actionTypes = Object.keys(AUDIT_LABELS);
+
+  const userOptions = users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+  const typeOptions = actionTypes.map(t => `<option value="${t}">${AUDIT_LABELS[t].icon} ${AUDIT_LABELS[t].label}</option>`).join('');
+
+  return `
+  <div class="view-header">
+    <h2>🕵️ Historial Completo</h2>
+    <p>Registro de absolutamente todos los movimientos del sistema</p>
+  </div>
+
+  <div class="card" style="padding:16px 20px; margin-bottom:20px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:12px; align-items:end;">
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Desde</label>
+        <input type="date" id="audit-from" style="font-size:13px;"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Hasta</label>
+        <input type="date" id="audit-to" style="font-size:13px;"/>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Usuario</label>
+        <select id="audit-user" style="font-size:13px;">
+          <option value="">Todos</option>
+          ${userOptions}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Tipo de acción</label>
+        <select id="audit-type" style="font-size:13px;">
+          <option value="">Todos</option>
+          ${typeOptions}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label style="font-size:12px;">Buscar texto</label>
+        <input type="text" id="audit-search" placeholder="Palabras clave..." style="font-size:13px;"/>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="applyAuditFilters()">🔍 Filtrar</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearAuditFilters()">✕ Limpiar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="audit-summary" style="margin-bottom:12px; font-size:13px; color:var(--text-3);"></div>
+
+  <div class="table-wrap">
+    <table id="audit-table">
+      <thead>
+        <tr>
+          <th>Fecha / Hora</th>
+          <th>Usuario</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+        </tr>
+      </thead>
+      <tbody id="audit-tbody">
+        ${renderAuditRows(allLogs)}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+function renderAuditRows(logs) {
+  if (!logs.length) return '<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:30px;">Sin registros para mostrar</td></tr>';
+  return logs.map(log => {
+    const meta = AUDIT_LABELS[log.action] || { icon: '📌', label: log.action };
+    return `<tr>
+      <td style="white-space:nowrap;font-size:12px;">${fmtDate(log.date)}</td>
+      <td><span style="font-weight:600;">${log.userName || '-'}</span></td>
+      <td><span class="badge badge-purple" style="font-size:11px;">${meta.icon} ${meta.label}</span></td>
+      <td style="font-size:13px;">${log.description}</td>
+    </tr>`;
+  }).join('');
+}
+
+function applyAuditFilters() {
+  let logs = DB.getAuditLog().slice().reverse();
+  const from   = document.getElementById('audit-from')?.value;
+  const to     = document.getElementById('audit-to')?.value;
+  const user   = document.getElementById('audit-user')?.value;
+  const type   = document.getElementById('audit-type')?.value;
+  const search = document.getElementById('audit-search')?.value?.toLowerCase();
+
+  if (from)   logs = logs.filter(l => l.date >= from);
+  if (to)     logs = logs.filter(l => l.date.slice(0,10) <= to);
+  if (user)   logs = logs.filter(l => l.userName === user);
+  if (type)   logs = logs.filter(l => l.action === type);
+  if (search) logs = logs.filter(l => l.description.toLowerCase().includes(search));
+
+  const tbody = document.getElementById('audit-tbody');
+  if (tbody) tbody.innerHTML = renderAuditRows(logs);
+  const summary = document.getElementById('audit-summary');
+  if (summary) summary.textContent = `Mostrando ${logs.length} registro(s)`;
+}
+
+function clearAuditFilters() {
+  ['audit-from','audit-to','audit-user','audit-type','audit-search'].forEach(id => {
+    const el2 = document.getElementById(id);
+    if (el2) el2.value = '';
+  });
+  const logs = DB.getAuditLog().slice().reverse();
+  const tbody = document.getElementById('audit-tbody');
+  if (tbody) tbody.innerHTML = renderAuditRows(logs);
+  const summary = document.getElementById('audit-summary');
+  if (summary) summary.textContent = '';
+}
+
+function bindHistoricoAdmin() {
+  // Allow pressing Enter in text search
+  const searchInput = document.getElementById('audit-search');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') applyAuditFilters(); });
+  }
+  // Show total on load
+  const total = DB.getAuditLog().length;
+  const summary = document.getElementById('audit-summary');
+  if (summary && total > 0) summary.textContent = `${total} registro(s) en total`;
 }
 
 // ─── Auto-login check & Supabase Startup ──────────────────
