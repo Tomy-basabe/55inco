@@ -101,7 +101,7 @@ const DB = {
         password: u.password,
         role: u.role,
         salaryHour: Number(u.salary_hour || 0),
-        defaultHours: Number(u.default_hours || 8)
+        defaultHours: Number(u.default_hours || 3.5)
       })));
 
       this.set(this.KEYS.categories, categories);

@@ -732,7 +732,7 @@ function openNuevoEmpleado() {
     <div class="form-group"><label>Contraseña</label><input id="emp-pass" type="password" placeholder="••••••"/></div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
-      <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="8"/></div>
+      <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="3.5"/></div>
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -745,7 +745,7 @@ function saveNuevoEmpleado() {
   const username = el('emp-user').value.trim();
   const password = el('emp-pass').value.trim();
   const salaryHour = parseFloat(el('emp-salary').value)||0;
-  const defaultHours = parseFloat(el('emp-hours').value)||8;
+  const defaultHours = parseFloat(el('emp-hours').value)||3.5;
   if (!name || !username || !password) { toast('Completa todos los campos requeridos.','error'); return; }
   const users = DB.getUsers();
   if (users.find(u=>u.username===username)) { toast('Ya existe ese usuario.','error'); return; }
@@ -763,7 +763,7 @@ function openEmpleadoEdit(id) {
     <div class="form-group"><label>Contraseña</label><input id="ee-pass" type="password" placeholder="Dejar vacío para no cambiar"/></div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Sueldo/hora ($)</label><input id="ee-salary" type="number" value="${u.salaryHour||0}"/></div>
-      <div class="form-group"><label>Horas por día</label><input id="ee-hours" type="number" value="${u.defaultHours||8}"/></div>
+      <div class="form-group"><label>Horas por día</label><input id="ee-hours" type="number" value="${u.defaultHours||3.5}"/></div>
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -778,7 +778,7 @@ function saveEmpleadoEdit(id) {
   const name = el('ee-name').value.trim();
   const pass = el('ee-pass').value.trim();
   const salaryHour = parseFloat(el('ee-salary').value)||0;
-  const defaultHours = parseFloat(el('ee-hours').value)||8;
+  const defaultHours = parseFloat(el('ee-hours').value)||3.5;
   if (!name) { toast('El nombre es requerido.','error'); return; }
   users[idx] = { ...users[idx], name, salaryHour, defaultHours };
   if (pass) users[idx].password = pass;
@@ -803,7 +803,7 @@ function renderHorasModal(userId, year, month) {
   const u = DB.getUsers().find(x=>x.id===userId);
   const monthDays = getMonthDays(year, month);
   const hoursData = DB.getHoursForMonth(userId, year, month);
-  const defaultH = u.defaultHours || 8;
+  const defaultH = u.defaultHours || 3.5;
   const monthName = new Date(year,month-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
   const todayStr = today();
 
@@ -3018,7 +3018,7 @@ async function startApp() {
         const dateStr = today();
         const hoursData = DB.getHours();
         if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
-          const defaultHours = currentUser.defaultHours || 8;
+          const defaultHours = currentUser.defaultHours || 3.5;
           DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
           toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
         }

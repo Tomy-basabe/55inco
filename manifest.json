@@ -1,0 +1,17 @@
+{
+  "name": "5inco Store",
+  "short_name": "5inco",
+  "description": "Sistema de gestión para local de ropa",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d0f14",
+  "theme_color": "#7c6ef8",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512 any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
