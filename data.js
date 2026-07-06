@@ -101,7 +101,8 @@ const DB = {
         password: u.password,
         role: u.role,
         salaryHour: Number(u.salary_hour || 0),
-        defaultHours: Number(u.default_hours || 3.5)
+        defaultHours: Number(u.default_hours || 3.5),
+        commissionPct: Number(u.commission_pct || 0)
       })));
 
       this.set(this.KEYS.categories, categories);
@@ -112,7 +113,8 @@ const DB = {
         categoryId: p.category_id,
         price: Number(p.price || 0),
         talle: p.talle,
-        stock: Number(p.stock || 0)
+        stock: Number(p.stock || 0),
+        variants: p.variants || []
       })));
 
       this.set(this.KEYS.debtors, debtors);
@@ -124,7 +126,8 @@ const DB = {
         paid: d.paid,
         date: d.date,
         paidDate: d.paid_date,
-        saleId: d.sale_id
+        saleId: d.sale_id,
+        detail: d.detail || null
       })));
 
       this.set(this.KEYS.sales, sales.map(s => ({
@@ -302,7 +305,8 @@ const DB = {
           password: user.password,
           role: user.role,
           salary_hour: user.salaryHour,
-          default_hours: user.defaultHours
+          default_hours: user.defaultHours,
+          commission_pct: user.commissionPct || 0
         })
       );
       Promise.all(promises).catch(err => console.error('Error sincronizando usuarios:', err));
@@ -359,7 +363,8 @@ const DB = {
         category_id: p.categoryId || null,
         price: p.price,
         talle: p.talle || null,
-        stock: p.stock
+        stock: p.stock,
+        variants: p.variants || []
       }).then(({ error }) => { if (error) console.error('Error insertando producto en Supabase:', error); });
     }
     return p;
@@ -378,7 +383,8 @@ const DB = {
           category_id: p.categoryId || null,
           price: p.price,
           talle: p.talle || null,
-          stock: p.stock
+          stock: p.stock,
+          variants: p.variants || []
         }).eq('id', id).then(({ error }) => { if (error) console.error('Error actualizando producto en Supabase:', error); });
       }
     }
@@ -486,7 +492,8 @@ const DB = {
         paid: d.paid,
         date: d.date,
         paid_date: d.paidDate || null,
-        sale_id: d.saleId || null
+        sale_id: d.saleId || null,
+        detail: d.detail || null
       }).then(({ error }) => { if (error) console.error('Error insertando deuda en Supabase:', error); });
     }
     return d;
@@ -643,7 +650,8 @@ const DB = {
           password: user.password,
           role: user.role,
           salary_hour: user.salaryHour,
-          default_hours: user.defaultHours
+          default_hours: user.defaultHours,
+          commission_pct: user.commissionPct || 0
         })
       );
       Promise.all(promises).catch(err => console.error('Error sincronizando usuarios:', err));

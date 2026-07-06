@@ -683,23 +683,64 @@ function bindDashboard() {}
 // ══════════════════════════════════════════════════════════
 //  EMPLEADOS
 // ══════════════════════════════════════════════════════════
+function getWeekRange() {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  return {
+    from: monday.toISOString().slice(0, 10),
+    to: sunday.toISOString().slice(0, 10)
+  };
+}
+
 function buildEmpleados() {
   const users = DB.getUsers().filter(u => u.role === 'cajero');
-  const now = new Date();
-  const year = now.getFullYear(); const month = now.getMonth()+1;
+  
+  if (!window._empleadosFromDate || !window._empleadosToDate) {
+    const range = getWeekRange();
+    window._empleadosFromDate = range.from;
+    window._empleadosToDate = range.to;
+  }
+  const fromD = window._empleadosFromDate;
+  const toD = window._empleadosToDate;
+
+  const sales = DB.getSales().filter(s => {
+    if (s.returned) return false;
+    const d = s.date.slice(0,10);
+    return d >= fromD && d <= toD;
+  });
+
+  const hoursDataObj = DB.getHours(); // { userId: { 'YYYY-MM-DD': hs } }
 
   let rows = users.map(u => {
-    const salary = DB.calcSalary(u.id, year, month);
-    const monthDays = getMonthDays(year, month);
-    const hoursData = DB.getHoursForMonth(u.id, year, month);
-    const totalHours = Object.values(hoursData).reduce((a,b)=>a+b,0);
+    // 1. Horas en el periodo
+    let totalHours = 0;
+    if (hoursDataObj[u.id]) {
+      Object.entries(hoursDataObj[u.id]).forEach(([d, hs]) => {
+        if (d >= fromD && d <= toD) totalHours += hs;
+      });
+    }
+    const baseSalary = totalHours * (u.salaryHour || 0);
+
+    // 2. Ventas y Comisión
+    const userSales = sales.filter(s => s.userId === u.id);
+    const totalSalesAmount = userSales.reduce((sum, s) => sum + s.totalFinal, 0);
+    const commissionPct = u.commissionPct || 0;
+    const commissionAmt = totalSalesAmount * (commissionPct / 100);
+
+    const totalToPay = baseSalary + commissionAmt;
+
     return `
     <tr>
       <td><div class="flex-row"><div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(u.name)}</div>${u.name}</div></td>
-      <td>${fmt(u.salaryHour||0)}/h</td>
-      <td>${u.defaultHours||0}h/día</td>
-      <td>${totalHours}h</td>
-      <td class="text-green">${fmt(salary)}</td>
+      <td>${totalHours}h <span style="font-size:10px;color:var(--text-3)">(${fmt(u.salaryHour||0)}/h)</span></td>
+      <td>${fmt(baseSalary)}</td>
+      <td>${fmt(totalSalesAmount)}</td>
+      <td>${fmt(commissionAmt)} <span style="font-size:10px;color:var(--accent)">(${commissionPct}%)</span></td>
+      <td class="text-green" style="font-weight:700;">${fmt(totalToPay)}</td>
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')">✏️ Editar</button>
         <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')">🕐 Horas</button>
@@ -710,20 +751,31 @@ function buildEmpleados() {
   return `
   <div class="view-header">
     <h2>👥 Empleados</h2>
-    <p>Gestión de sueldos y horas trabajadas</p>
+    <p>Gestión de sueldos y comisiones</p>
     <div class="view-actions">
+      <div class="search-box" style="flex:unset; width:auto; padding: 4px 10px;">
+        <span style="font-size:12px; color:var(--text-3); font-weight:600;">PERÍODO:</span>
+        <input type="date" id="emp-filter-from" value="${fromD}" style="width:130px; font-size:12px; padding:4px; margin-left:8px; border:none; outline:none; background:transparent; color:var(--text);" />
+        <span style="color:var(--text-3)">-</span>
+        <input type="date" id="emp-filter-to" value="${toD}" style="width:130px; font-size:12px; padding:4px; border:none; outline:none; background:transparent; color:var(--text);" />
+      </div>
       <button class="btn btn-primary" onclick="openNuevoEmpleado()">➕ Nuevo empleado</button>
     </div>
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Nombre</th><th>Sueldo/hora</th><th>Hs. por día</th><th>Hs. este mes</th><th>Sueldo del mes</th><th>Acciones</th></tr></thead>
-      <tbody>${rows || '<tr><td colspan="6" style="text-align:center;color:var(--text-3)">Sin empleados</td></tr>'}</tbody>
+      <thead><tr><th>Nombre</th><th>Horas</th><th>Sueldo Base</th><th>Ventas Generadas</th><th>Comisión</th><th>Total a Pagar</th><th>Acciones</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--text-3)">Sin empleados</td></tr>'}</tbody>
     </table>
   </div>`;
 }
 
-function bindEmpleados() {}
+function bindEmpleados() {
+  const fromEl = document.getElementById('emp-filter-from');
+  const toEl = document.getElementById('emp-filter-to');
+  if (fromEl) fromEl.addEventListener('change', (e) => { window._empleadosFromDate = e.target.value; renderView('view-empleados'); });
+  if (toEl) toEl.addEventListener('change', (e) => { window._empleadosToDate = e.target.value; renderView('view-empleados'); });
+}
 
 function openNuevoEmpleado() {
   openModal('Nuevo Empleado', `
@@ -734,6 +786,7 @@ function openNuevoEmpleado() {
       <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
       <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="3.5"/></div>
     </div>
+    <div class="form-group"><label>Comisión por ventas (%)</label><input id="emp-comm" type="number" step="0.1" placeholder="Ej: 5"/></div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveNuevoEmpleado()">Guardar</button>
@@ -746,10 +799,11 @@ function saveNuevoEmpleado() {
   const password = el('emp-pass').value.trim();
   const salaryHour = parseFloat(el('emp-salary').value)||0;
   const defaultHours = parseFloat(el('emp-hours').value)||3.5;
+  const commissionPct = parseFloat(el('emp-comm').value)||0;
   if (!name || !username || !password) { toast('Completa todos los campos requeridos.','error'); return; }
   const users = DB.getUsers();
   if (users.find(u=>u.username===username)) { toast('Ya existe ese usuario.','error'); return; }
-  const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours };
+  const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours, commissionPct };
   users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${name}"`);
   closeModal(); toast('Empleado creado.','success');
   renderView('view-empleados');
@@ -765,6 +819,7 @@ function openEmpleadoEdit(id) {
       <div class="form-group"><label>Sueldo/hora ($)</label><input id="ee-salary" type="number" value="${u.salaryHour||0}"/></div>
       <div class="form-group"><label>Horas por día</label><input id="ee-hours" type="number" value="${u.defaultHours||3.5}"/></div>
     </div>
+    <div class="form-group"><label>Comisión por ventas (%)</label><input id="ee-comm" type="number" step="0.1" value="${u.commissionPct||0}"/></div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEmpleadoEdit('${id}')">Guardar</button>
@@ -779,8 +834,9 @@ function saveEmpleadoEdit(id) {
   const pass = el('ee-pass').value.trim();
   const salaryHour = parseFloat(el('ee-salary').value)||0;
   const defaultHours = parseFloat(el('ee-hours').value)||3.5;
+  const commissionPct = parseFloat(el('ee-comm').value)||0;
   if (!name) { toast('El nombre es requerido.','error'); return; }
-  users[idx] = { ...users[idx], name, salaryHour, defaultHours };
+  users[idx] = { ...users[idx], name, salaryHour, defaultHours, commissionPct };
   if (pass) users[idx].password = pass;
   DB.saveUsersWithAudit(users, `Empleado editado: "${name}"`);
   closeModal(); toast('Empleado actualizado.','success');
@@ -1036,20 +1092,20 @@ function bindStock() {
 
 function variantRowHtml(idx, label, price, stock) {
   return `
-  <div class="variant-row" data-idx="${idx}" style="display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:8px 10px;background:var(--bg3);border-radius:var(--r-sm);border:1px solid var(--border);">
-    <div class="form-group" style="margin:0;flex:1.2;">
+  <div class="variant-row" data-idx="${idx}">
+    <div class="form-group">
       <label style="font-size:11px;">Etiqueta</label>
       <input class="vr-label" type="text" value="${label}" placeholder="Ej: Mayorista, Minorista" style="font-size:13px;"/>
     </div>
-    <div class="form-group" style="margin:0;flex:1;">
+    <div class="form-group">
       <label style="font-size:11px;">Precio ($)</label>
       <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;"/>
     </div>
-    <div class="form-group" style="margin:0;flex:0.7;">
+    <div class="form-group">
       <label style="font-size:11px;">Stock</label>
       <input class="vr-stock" type="number" value="${stock}" min="0" style="font-size:13px;"/>
     </div>
-    <button class="btn btn-danger btn-sm btn-icon" onclick="this.closest('.variant-row').remove()" style="margin-top:14px;" title="Quitar">✕</button>
+    <button class="btn btn-danger btn-sm btn-icon btn-remove-vr" onclick="this.closest('.variant-row').remove()" title="Quitar">✕</button>
   </div>`;
 }
 
@@ -1910,6 +1966,7 @@ function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti
     payType: isMulti ? 'multi' : salePayType, 
     debtorId: saleDebtorId,
     cashier: currentUser.name,
+    userId: currentUser.id,
     splitDetails: isMulti ? { cash: splitCash, card: splitCard, debt: splitDebt } : null
   });
 
@@ -2290,30 +2347,54 @@ function openDebtorDetail(id) {
   const debtor = DB.getDebtors().find(d=>d.id===id);
   if (!debtor) return;
   const debts = DB.getDebts().filter(d=>d.debtorId===id);
+  const sales = DB.getSales();
   const balance = DB.getDebtorBalance(id);
-  const rows = debts.map(debt => {
+
+  const cards = debts.map(debt => {
     const isAbono = debt.amount < 0;
     const amountStr = isAbono ? `+${fmt(Math.abs(debt.amount))}` : fmt(debt.amount);
     const badgeCls = debt.paid ? 'badge-green' : (isAbono ? 'badge-purple' : 'badge-red');
     const badgeTxt = debt.paid ? (isAbono ? 'Aplicado' : 'Pagado') : (isAbono ? 'Abono a favor' : 'Pendiente');
-    
-    let actionHtml = '';
-    if (debt.paid) {
-      actionHtml = fmtDate(debt.paidDate);
+
+    // Build detail description
+    let detailHtml = '';
+    if (debt.saleId) {
+      const sale = sales.find(s => s.id === debt.saleId);
+      if (sale && sale.items && sale.items.length > 0) {
+        const itemsList = sale.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+        detailHtml = `<div class="debt-card-detail">🛒 Venta: ${itemsList}</div>`;
+      } else {
+        detailHtml = `<div class="debt-card-detail">🛒 Venta vinculada</div>`;
+      }
+    } else if (debt.detail) {
+      detailHtml = `<div class="debt-card-detail">${isAbono ? '💸' : '📝'} ${debt.detail}</div>`;
     } else {
-      actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ ${isAbono ? 'Archivar abono' : 'Marcar pagado'}</button>`;
+      detailHtml = `<div class="debt-card-detail" style="color:var(--text-3)">${isAbono ? '💸 Abono / Pago manual' : '📝 Agregado manualmente'}</div>`;
     }
 
-    const saleHtml = debt.saleId 
-      ? `<br/><a href="#" onclick="viewSaleTicket('${debt.saleId}')" style="font-size:11px;color:var(--accent);text-decoration:underline;white-space:nowrap;">Ver Venta</a>`
+    let actionHtml = '';
+    if (debt.paid) {
+      actionHtml = `<span style="font-size:11px;color:var(--text-3)">Cerrado: ${fmtDate(debt.paidDate)}</span>`;
+    } else {
+      actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ ${isAbono ? 'Archivar' : 'Pagado'}</button>`;
+    }
+
+    const saleLink = debt.saleId
+      ? `<a href="#" onclick="viewSaleTicket('${debt.saleId}')" style="font-size:11px;color:var(--accent);text-decoration:underline;">Ver Ticket</a>`
       : '';
 
-    return `<tr>
-      <td>${fmtDate(debt.date)}${saleHtml}</td>
-      <td style="font-weight:600; ${isAbono ? 'color:var(--green)' : ''}">${amountStr}</td>
-      <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
-      <td>${actionHtml}</td>
-    </tr>`;
+    return `
+    <div class="debt-card ${debt.paid ? 'debt-card--paid' : ''} ${isAbono ? 'debt-card--abono' : ''}">
+      <div class="debt-card-header">
+        <span class="debt-card-date">${fmtDate(debt.date)}</span>
+        <span class="badge ${badgeCls}">${badgeTxt}</span>
+      </div>
+      ${detailHtml}
+      <div class="debt-card-footer">
+        <div class="debt-card-amount ${isAbono ? 'text-green' : ''}">${amountStr}</div>
+        <div class="debt-card-actions">${saleLink} ${actionHtml}</div>
+      </div>
+    </div>`;
   }).join('');
 
   openModal(`💳 ${debtor.name}`, `
@@ -2327,11 +2408,9 @@ function openDebtorDetail(id) {
         <div style="font-size:22px;font-weight:800;color:var(--red)">${fmt(balance)}</div>
       </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Acción</th></tr></thead>
-        <tbody>${rows||'<tr><td colspan="4" style="text-align:center;color:var(--text-3)">Sin deudas registradas</td></tr>'}</tbody>
-      </table>
+    <div class="divider"></div>
+    <div class="debt-cards-list">
+      ${cards || '<div class="empty-state" style="padding:24px 0"><div class="empty-icon">💳</div><p>Sin movimientos registrados.</p></div>'}
     </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
@@ -2416,6 +2495,7 @@ function openEditDebtor(id) {
       <div class="form-group"><label>➕ Sumar deuda</label><input id="ed-add-debt" type="number" placeholder="$ a sumar" min="0"/></div>
       <div class="form-group"><label>➖ Abonar (Restar)</label><input id="ed-sub-debt" type="number" placeholder="$ a restar" min="0"/></div>
     </div>
+    <div class="form-group"><label>Detalle (Opcional)</label><input id="ed-detail" type="text" placeholder="Motivo de la suma o abono"/></div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditDebtor('${id}')">Guardar</button>
@@ -2427,16 +2507,17 @@ function saveEditDebtor(id) {
   const surcharge = parseFloat(el('ed-sur').value)||0;
   const newDebt = parseFloat(el('ed-add-debt').value)||0;
   const payDebtAmt = parseFloat(el('ed-sub-debt').value)||0;
+  const detail = el('ed-detail').value.trim() || null;
   
   if (!name) { toast('El nombre es requerido.','error'); return; }
   DB.updateDebtor(id, { name, phone, surcharge });
   
   if (newDebt > 0) {
-    DB.addDebt({ debtorId: id, amount: newDebt });
+    DB.addDebt({ debtorId: id, amount: newDebt, detail });
   }
   if (payDebtAmt > 0) {
     // Add negative debt to represent a payment/abono
-    DB.addDebt({ debtorId: id, amount: -Math.abs(payDebtAmt) });
+    DB.addDebt({ debtorId: id, amount: -Math.abs(payDebtAmt), detail });
   }
   
   closeModal(); toast('Deudor actualizado.','success');

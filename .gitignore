@@ -1,2 +1,9 @@
 Skills/
 .gemini/
+*.py
+Base datos local Ropa.txt
+*.xlsx
+*.sql
+*.json
+!package.json
+!package-lock.json
