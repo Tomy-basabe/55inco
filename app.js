@@ -573,6 +573,7 @@ function renderMainContent() {
     <div class="view" id="view-venta"></div>
     <div class="view" id="view-historial"></div>
     <div class="view" id="view-deudores"></div>
+    <div class="view" id="view-mis-ganancias"></div>
   `;
   // Render all views
   const views = ['view-venta','view-historial','view-deudores', 'view-gastos', 'view-mis-ganancias'];
