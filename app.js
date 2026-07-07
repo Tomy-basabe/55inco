@@ -462,6 +462,7 @@ function renderSidebar() {
   ];
   if (!jefe) {
     ventasItems.push({ view: 'view-gastos', icon: '💸', label: 'Caja y Retiros' });
+    ventasItems.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Mis Ganancias' });
   }
   html += navSection('Ventas', ventasItems);
   html += navSection('Deudores', [
@@ -504,6 +505,7 @@ function getMobileNavItems() {
     items.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
   } else {
     items.push({ view: 'view-gastos', icon: '💸', label: 'Caja' });
+    items.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Ganancias' });
   }
   return items;
 }
@@ -573,7 +575,7 @@ function renderMainContent() {
     <div class="view" id="view-deudores"></div>
   `;
   // Render all views
-  const views = ['view-venta','view-historial','view-deudores', 'view-gastos'];
+  const views = ['view-venta','view-historial','view-deudores', 'view-gastos', 'view-mis-ganancias'];
   if (currentUser.role === 'jefe') views.push('view-dashboard','view-empleados','view-stock','view-categorias','view-historico-admin');
   views.forEach(v => renderView(v));
 }
@@ -590,6 +592,7 @@ function renderView(v) {
     case 'view-historial':         el2.innerHTML = buildHistorial(); break;
     case 'view-deudores':          el2.innerHTML = buildDeudores(); bindDeudores(); break;
     case 'view-gastos':            el2.innerHTML = buildGastos(); bindGastos(); break;
+    case 'view-mis-ganancias':     el2.innerHTML = buildMisGanancias(); bindMisGanancias(); break;
     case 'view-historico-admin':   el2.innerHTML = buildHistoricoAdmin(); bindHistoricoAdmin(); break;
   }
 }
@@ -683,16 +686,92 @@ function bindDashboard() {}
 // ══════════════════════════════════════════════════════════
 //  EMPLEADOS
 // ══════════════════════════════════════════════════════════
+function buildMisGanancias() {
+  const u = currentUser;
+  
+  if (!window._gananciasFromDate || !window._gananciasToDate) {
+    const range = getWeekRange();
+    window._gananciasFromDate = range.from;
+    window._gananciasToDate = range.to;
+  }
+  const fromD = window._gananciasFromDate;
+  const toD = window._gananciasToDate;
+
+  const sales = DB.getSales().filter(s => {
+    if (s.returned || s.userId !== u.id) return false;
+    const d = s.date.slice(0,10);
+    return d >= fromD && d <= toD;
+  });
+
+  const hoursDataObj = DB.getHours();
+  let totalHours = 0;
+  if (hoursDataObj[u.id]) {
+    Object.entries(hoursDataObj[u.id]).forEach(([d, hs]) => {
+      if (d >= fromD && d <= toD) totalHours += hs;
+    });
+  }
+
+  const baseSalary = totalHours * (u.salaryHour || 0);
+  const totalSalesAmount = sales.reduce((sum, s) => sum + s.totalFinal, 0);
+  const commissionPct = u.commissionPct || 0;
+  const commissionAmt = totalSalesAmount * (commissionPct / 100);
+  const totalToPay = baseSalary + commissionAmt;
+
+  return `
+  <div class="view-header">
+    <h2>💰 Mis Ganancias</h2>
+    <p>Resumen de tus horas y comisiones</p>
+    <div class="view-actions">
+      <div class="search-box" style="flex:unset; width:auto; padding: 4px 10px;">
+        <span style="font-size:12px; color:var(--text-3); font-weight:600;">SEMANA:</span>
+        <input type="date" id="mg-filter-from" value="${fromD}" style="width:130px; font-size:12px; padding:4px; margin-left:8px; border:none; outline:none; background:transparent; color:var(--text);" />
+        <span style="color:var(--text-3)">-</span>
+        <input type="date" id="mg-filter-to" value="${toD}" style="width:130px; font-size:12px; padding:4px; border:none; outline:none; background:transparent; color:var(--text);" />
+      </div>
+    </div>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;">
+    <div class="stat-card">
+      <div class="stat-icon">🕐</div>
+      <div class="stat-label">Horas Trabajadas</div>
+      <div class="stat-value">${totalHours}h <span style="font-size:14px;color:var(--text-3);font-weight:500;">(${fmt(u.salaryHour||0)}/h)</span></div>
+      <div style="margin-top:8px;font-size:14px;color:var(--text-2);">Sueldo base: <strong>${fmt(baseSalary)}</strong></div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-icon">🛍️</div>
+      <div class="stat-label">Ventas Generadas</div>
+      <div class="stat-value">${fmt(totalSalesAmount)}</div>
+      <div style="margin-top:8px;font-size:14px;color:var(--text-2);">Comisión (${commissionPct}%): <strong class="text-accent">${fmt(commissionAmt)}</strong></div>
+    </div>
+  </div>
+  
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:var(--r-md); padding:24px; text-align:center;">
+    <div style="font-size:14px; color:var(--text-2); text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-bottom:8px;">Total a Cobrar</div>
+    <div style="font-size:36px; font-weight:800; color:var(--green);">${fmt(totalToPay)}</div>
+    <div style="font-size:13px; color:var(--text-3); margin-top:8px;">(Sueldo base + Comisión)</div>
+  </div>
+  `;
+}
+
+function bindMisGanancias() {
+  const fromEl = el('mg-filter-from');
+  const toEl = el('mg-filter-to');
+  if (fromEl) fromEl.addEventListener('change', (e) => { window._gananciasFromDate = e.target.value; renderView('view-mis-ganancias'); });
+  if (toEl) toEl.addEventListener('change', (e) => { window._gananciasToDate = e.target.value; renderView('view-mis-ganancias'); });
+}
+
 function getWeekRange() {
   const now = new Date();
   const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
+  const diff = now.getDate() - day;
+  const sunday = new Date(now.setDate(diff));
+  const saturday = new Date(sunday);
+  saturday.setDate(saturday.getDate() + 6);
   return {
-    from: monday.toISOString().slice(0, 10),
-    to: sunday.toISOString().slice(0, 10)
+    from: sunday.toISOString().slice(0, 10),
+    to: saturday.toISOString().slice(0, 10)
   };
 }
 
