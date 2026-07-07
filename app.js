@@ -699,7 +699,8 @@ function buildMisGanancias() {
   const toD = window._gananciasToDate;
 
   const sales = DB.getSales().filter(s => {
-    if (s.returned || s.userId !== u.id) return false;
+    if (s.returned) return false;
+    if (s.userId !== u.id && s.cashier !== u.name) return false;
     const d = s.date.slice(0,10);
     return d >= fromD && d <= toD;
   });
@@ -848,6 +849,45 @@ function buildEmpleados() {
       <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--text-3)">Sin empleados</td></tr>'}</tbody>
     </table>
   </div>`;
+}
+
+function openEmployeeSales(userId, fromD, toD) {
+  const u = DB.getUsers().find(x => x.id === userId);
+  if (!u) return;
+
+  const sales = DB.getSales().filter(s => {
+    if (s.returned) return false;
+    if (s.userId !== u.id && s.cashier !== u.name) return false;
+    const d = s.date.slice(0, 10);
+    return d >= fromD && d <= toD;
+  });
+
+  if (sales.length === 0) {
+    toast(`No hay ventas registradas para ${u.name} en este período.`, 'info');
+    return;
+  }
+
+  const rows = sales.map(s => {
+    return `
+      <tr>
+        <td style="font-size:12px;">${fmtDate(s.date)}</td>
+        <td style="font-size:12px;">${(s.items||[]).map(i => `${i.name} x${i.qty}`).join(', ')}</td>
+        <td class="text-accent" style="font-weight:700;">${fmt(s.totalFinal)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  openModal(`🛍️ Ventas de ${u.name}`, `
+    <div style="font-size:13px; color:var(--text-2); margin-bottom:12px;">
+      Mostrando <strong>${sales.length}</strong> ventas del período seleccionado.
+    </div>
+    <div class="table-wrap" style="max-height:300px; overflow-y:auto;">
+      <table>
+        <thead><tr><th>Fecha y Hora</th><th>Productos</th><th>Total</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `, '');
 }
 
 function bindEmpleados() {
