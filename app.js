@@ -2627,6 +2627,16 @@ function buildGastos() {
     if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.cash || 0);
     return sum;
   }, 0);
+  const cardSalesToday = todaySales.reduce((sum, s) => {
+    if (s.payType === 'debito') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.card || 0);
+    return sum;
+  }, 0);
+  const debtorSalesToday = todaySales.reduce((sum, s) => {
+    if (s.payType === 'deudor') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.debt || 0);
+    return sum;
+  }, 0);
 
   const expensesToday = DB.getExpenses().filter(e => e.date.startsWith(dateStr)).reduce((sum, e) => sum + e.amount, 0);
   const openingCash = cashSess ? cashSess.openingCash : 0;
@@ -2710,6 +2720,16 @@ function buildGastos() {
       <div class="stat-icon">💵</div>
       <div class="stat-label">Ventas Efectivo Hoy</div>
       <div class="stat-value text-green">${fmt(cashSalesToday)}</div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid var(--blue);">
+      <div class="stat-icon">💳</div>
+      <div class="stat-label">Ventas Tarjeta Hoy</div>
+      <div class="stat-value text-blue">${fmt(cardSalesToday)}</div>
+    </div>
+    <div class="stat-card" style="border-left: 4px solid var(--yellow);">
+      <div class="stat-icon">📋</div>
+      <div class="stat-label">Ventas Deudor Hoy</div>
+      <div class="stat-value text-yellow">${fmt(debtorSalesToday)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--red);">
       <div class="stat-icon">💸</div>
