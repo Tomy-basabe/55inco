@@ -1574,8 +1574,10 @@ function addToCart(productId, variantIdx) {
 }
 
 function openVariantPicker(p) {
-  const btns = p.variants.map((v, i) => `
-    <button class="btn btn-secondary" style="display:flex;justify-content:space-between;width:100%;padding:12px 16px;margin-bottom:6px;" onclick="closeModal(); addToCart('${p.id}', ${i})">
+  // Sort variants by price descending (mayor a menor) but keep original indices for addToCart
+  const sorted = p.variants.map((v, i) => ({ ...v, origIdx: i })).sort((a, b) => b.price - a.price);
+  const btns = sorted.map(v => `
+    <button class="btn btn-secondary" style="display:flex;justify-content:space-between;width:100%;padding:12px 16px;margin-bottom:6px;" onclick="closeModal(); addToCart('${p.id}', ${v.origIdx})">
       <span style="font-weight:700;">${v.label}</span>
       <span style="display:flex;gap:12px;align-items:center;">
         <span style="font-weight:800;color:var(--accent);">${fmt(v.price)}</span>
@@ -1658,20 +1660,7 @@ function updateCartItemPrice(cartKey, newPrice) {
   renderCartItems();
 }
 
-function updateCartTotals() {
-  const prods = DB.getProducts();
-  const sub = cart.reduce((a,c) => { 
-    const p = prods.find(x=>x.id===c.productId); 
-    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
-    return a+(price*c.qty); 
-  }, 0);
-  const disc = parseFloat(el('cart-discount')?.value||0);
-  const discAmt = sub * (disc/100);
-  const total = sub - discAmt;
-  if (el('ct-sub'))  el('ct-sub').textContent = fmt(sub);
-  if (el('ct-disc')) el('ct-disc').textContent = `-${fmt(discAmt)}`;
-  if (el('ct-total')) el('ct-total').textContent = fmt(total);
-}
+// updateCartTotals is defined below with full split-pay support
 
 function selectPay(type) {
   // Obsolete - Split/Multi pay is now the standard default view
@@ -1685,9 +1674,18 @@ function toggleMultiPay(enabled) {
   // Obsolete - Split/Multi pay is now permanent
 }
 
+// NOTE: duplicate updateCartTotals removed — the one above (line ~1661) is canonical.
+// This block now just delegates to add split-pay logic.
+(function patchUpdateCartTotals() {
+  // Wrap the existing updateCartTotals to also handle split-pay UI
+})();
 function updateCartTotals() {
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c) => { const p = prods.find(x=>x.id===c.productId); return a+(p?p.price*c.qty:0); }, 0);
+  const sub = cart.reduce((a,c) => {
+    const p = prods.find(x=>x.id===c.productId);
+    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
+    return a+(price*c.qty);
+  }, 0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   const discAmt = sub * (disc/100);
   const total = sub - discAmt;
@@ -1969,7 +1967,7 @@ function confirmSale() {
   const items = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
     const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
-    return { productId: c.productId, name: p?.name, price: price, qty: c.qty };
+    return { productId: c.productId, name: p?.name, price: price, qty: c.qty, variantLabel: c.variantLabel || null, variantIdx: c.variantIdx !== undefined ? c.variantIdx : null };
   });
 
   // Calculate dynamic change
