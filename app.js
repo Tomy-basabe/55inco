@@ -2,6 +2,8 @@
    5inco Store – App Logic
    ═══════════════════════════════════════ */
 
+const APP_VERSION = '1.4.0';
+
 // ─── Init ─────────────────────────────────────────────────
 // Supabase y seed se inicializan asíncronamente al final en startApp()
 
@@ -579,6 +581,16 @@ function renderMainContent() {
   const views = ['view-venta','view-historial','view-deudores', 'view-gastos', 'view-mis-ganancias'];
   if (currentUser.role === 'jefe') views.push('view-dashboard','view-empleados','view-stock','view-categorias','view-historico-admin');
   views.forEach(v => renderView(v));
+
+  // Version badge (bottom-right corner)
+  let vBadge = document.getElementById('app-version-badge');
+  if (!vBadge) {
+    vBadge = document.createElement('div');
+    vBadge.id = 'app-version-badge';
+    vBadge.style.cssText = 'position:fixed;bottom:10px;right:14px;font-size:10px;color:var(--text-3);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 8px;z-index:9999;pointer-events:none;font-family:monospace;';
+    document.body.appendChild(vBadge);
+  }
+  vBadge.textContent = `v${APP_VERSION}`;
 }
 
 function renderView(v) {
@@ -807,7 +819,7 @@ function buildEmpleados() {
     const baseSalary = totalHours * (u.salaryHour || 0);
 
     // 2. Ventas y Comisión
-    const userSales = sales.filter(s => s.userId === u.id);
+    const userSales = sales.filter(s => s.userId === u.id || (!s.userId && s.cashier === u.name));
     const totalSalesAmount = userSales.reduce((sum, s) => sum + s.totalFinal, 0);
     const commissionPct = u.commissionPct || 0;
     const commissionAmt = totalSalesAmount * (commissionPct / 100);
@@ -825,6 +837,7 @@ function buildEmpleados() {
       <td>
         <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')">✏️ Editar</button>
         <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')">🕐 Horas</button>
+        <button class="btn btn-primary btn-sm" onclick="openEmployeeSales('${u.id}', '${fromD}', '${toD}')">🛍️ Ventas</button>
       </td>
     </tr>`;
   }).join('');
