@@ -7,3 +7,5 @@ Base datos local Ropa.txt
 *.json
 !package.json
 !package-lock.json
+!manifest.json
+!vercel.json
