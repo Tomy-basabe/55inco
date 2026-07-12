@@ -2198,7 +2198,7 @@ function buildHistorial() {
   return `
   <div class="view-header">
     <h2>📋 Historial de Ventas</h2>
-    <p>${filteredSales.length} venta(s) mostrada(s) · Recaudado neto: <strong class="text-green">${fmt(total)}</strong></p>
+    <p>${filteredCombined.length} venta(s) mostrada(s) · Recaudado neto: <strong class="text-green">${fmt(total)}</strong></p>
     <div class="view-actions">
       <button class="btn btn-secondary" onclick="exportHistorialCSV()">📥 Exportar Excel (CSV)</button>
     </div>
