@@ -465,6 +465,7 @@ function renderSidebar() {
   if (!jefe) {
     ventasItems.push({ view: 'view-gastos', icon: '💸', label: 'Caja y Retiros' });
     ventasItems.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Mis Ganancias' });
+    ventasItems.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
   }
   html += navSection('Ventas', ventasItems);
   html += navSection('Deudores', [
@@ -508,6 +509,7 @@ function getMobileNavItems() {
   } else {
     items.push({ view: 'view-gastos', icon: '💸', label: 'Caja' });
     items.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Ganancias' });
+    items.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
   }
   return items;
 }
@@ -567,10 +569,10 @@ function renderMainContent() {
     ${currentUser.role === 'jefe' ? `
     <div class="view" id="view-dashboard"></div>
     <div class="view" id="view-empleados"></div>
-    <div class="view" id="view-stock"></div>
     <div class="view" id="view-categorias"></div>
     <div class="view" id="view-historico-admin"></div>
     ` : ''}
+    <div class="view" id="view-stock"></div>
     <div class="view" id="view-gastos"></div>
     <div class="view" id="view-venta"></div>
     <div class="view" id="view-historial"></div>
@@ -578,8 +580,8 @@ function renderMainContent() {
     <div class="view" id="view-mis-ganancias"></div>
   `;
   // Render all views
-  const views = ['view-venta','view-historial','view-deudores', 'view-gastos', 'view-mis-ganancias'];
-  if (currentUser.role === 'jefe') views.push('view-dashboard','view-empleados','view-stock','view-categorias','view-historico-admin');
+  const views = ['view-venta','view-historial','view-deudores', 'view-gastos', 'view-mis-ganancias', 'view-stock'];
+  if (currentUser.role === 'jefe') views.push('view-dashboard','view-empleados','view-categorias','view-historico-admin');
   views.forEach(v => renderView(v));
 
   // Version badge (bottom-right corner)
@@ -2121,52 +2123,77 @@ function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti
 //  HISTORIAL DE VENTAS
 // ══════════════════════════════════════════════════════════
 function buildHistorial() {
-  const sales = DB.getSales().slice().reverse();
+  const sales = DB.getSales().map(s => ({ ...s, _type: 'sale' }));
+  const manualDebts = DB.getDebts().filter(d => !d.saleId).map(d => ({ ...d, _type: 'manual_debt' }));
+  const combined = [...sales, ...manualDebts].sort((a, b) => new Date(b.date) - new Date(a.date));
   const todayVal = today();
   
   // Get date range inputs or defaults
   const fromDate = window._historialFromDate || '';
   const toDate = window._historialToDate || '';
 
-  const filteredSales = sales.filter(s => {
-    const sDate = s.date.slice(0, 10);
+  const filteredCombined = combined.filter(item => {
+    const sDate = item.date.slice(0, 10);
     if (fromDate && sDate < fromDate) return false;
     if (toDate && sDate > toDate) return false;
     return true;
   });
 
-  const rows = filteredSales.map(s => {
-    let payBadge = '';
-    if (s.payType === 'multi') {
-      payBadge = '<span class="badge badge-purple">🥞 Multi-Pago</span>';
+  const rows = filteredCombined.map(item => {
+    if (item._type === 'sale') {
+      const s = item;
+      let payBadge = '';
+      if (s.payType === 'multi') {
+        payBadge = '<span class="badge badge-purple">🥞 Multi-Pago</span>';
+      } else {
+        payBadge = {
+          efectivo: '<span class="badge badge-green">💵 Efectivo</span>',
+          debito:   '<span class="badge badge-blue">💳 Débito/Créd.</span>',
+          deudor:   '<span class="badge badge-yellow">📋 Deudor</span>',
+        }[s.payType] || s.payType;
+      }
+      
+      const debtor = s.debtorId ? DB.getDebtors().find(d=>d.id===s.debtorId) : null;
+      const isReturned = s.returned === true;
+      
+      return `<tr style="${isReturned ? 'opacity: 0.6;' : ''}">
+        <td>${fmtDate(s.date)}</td>
+        <td>
+          ${s.items?.map(i=>`${i.name} x${i.qty}`).join(', ')}
+          ${isReturned ? '<span class="return-item-badge">Devolución</span>' : ''}
+        </td>
+        <td>${s.cashier||'-'}</td>
+        <td>${payBadge}${debtor?` <small class="text-muted">${debtor.name}</small>`:''}</td>
+        <td>${s.discountPct>0?`<span class="text-green">-${s.discountPct}%</span>`:'-'}</td>
+        <td class="text-accent" style="font-weight:700">${fmt(s.totalFinal)}</td>
+        <td>
+          ${!isReturned ? `<button class="btn btn-danger btn-sm btn-icon" onclick="processReturn('${s.id}')" title="Procesar Devolución/Cambio">🔄</button>` : '—'}
+        </td>
+      </tr>`;
     } else {
-      payBadge = {
-        efectivo: '<span class="badge badge-green">💵 Efectivo</span>',
-        debito:   '<span class="badge badge-blue">💳 Débito/Créd.</span>',
-        deudor:   '<span class="badge badge-yellow">📋 Deudor</span>',
-      }[s.payType] || s.payType;
+      const d = item;
+      const isAbono = d.amount < 0;
+      const debtor = DB.getDebtors().find(x=>x.id===d.debtorId);
+      const debtorName = debtor ? debtor.name : 'Deudor';
+      const detailStr = d.detail ? ` <small class="text-muted">(${d.detail})</small>` : '';
+      return `<tr style="background-color: var(--bg3);">
+        <td>${fmtDate(d.date)}</td>
+        <td>
+          ${isAbono ? '💸 Abono a Deuda' : '📝 Deuda Agregada'}${detailStr}
+        </td>
+        <td>-</td>
+        <td><span class="badge ${isAbono ? 'badge-purple' : 'badge-yellow'}">Manual</span> <small class="text-muted">${debtorName}</small></td>
+        <td>-</td>
+        <td class="${isAbono ? 'text-green' : 'text-red'}" style="font-weight:700">${fmt(Math.abs(d.amount))}</td>
+        <td>—</td>
+      </tr>`;
     }
-    
-    const debtor = s.debtorId ? DB.getDebtors().find(d=>d.id===s.debtorId) : null;
-    const isReturned = s.returned === true;
-    
-    return `<tr style="${isReturned ? 'opacity: 0.6;' : ''}">
-      <td>${fmtDate(s.date)}</td>
-      <td>
-        ${s.items?.map(i=>`${i.name} x${i.qty}`).join(', ')}
-        ${isReturned ? '<span class="return-item-badge">Devolución</span>' : ''}
-      </td>
-      <td>${s.cashier||'-'}</td>
-      <td>${payBadge}${debtor?` <small class="text-muted">${debtor.name}</small>`:''}</td>
-      <td>${s.discountPct>0?`<span class="text-green">-${s.discountPct}%</span>`:'-'}</td>
-      <td class="text-accent" style="font-weight:700">${fmt(s.totalFinal)}</td>
-      <td>
-        ${!isReturned ? `<button class="btn btn-danger btn-sm btn-icon" onclick="processReturn('${s.id}')" title="Procesar Devolución/Cambio">🔄</button>` : '—'}
-      </td>
-    </tr>`;
   }).join('');
 
-  const total = filteredSales.reduce((a,s)=>a+(s.returned?0:s.totalFinal),0);
+  const total = filteredCombined.reduce((a, item) => {
+    if (item._type === 'sale' && !item.returned) return a + item.totalFinal;
+    return a;
+  }, 0);
   
   return `
   <div class="view-header">
@@ -2645,10 +2672,12 @@ function saveEditDebtor(id) {
   
   if (newDebt > 0) {
     DB.addDebt({ debtorId: id, amount: newDebt, detail });
+    DB.addAuditLog('debtor_update', `Suma de deuda manual: ${name} - $${newDebt}`, { debtorId: id, amount: newDebt, detail });
   }
   if (payDebtAmt > 0) {
     // Add negative debt to represent a payment/abono
     DB.addDebt({ debtorId: id, amount: -Math.abs(payDebtAmt), detail });
+    DB.addAuditLog('debtor_update', `Abono de deuda manual: ${name} - $${payDebtAmt}`, { debtorId: id, amount: payDebtAmt, detail });
   }
   
   closeModal(); toast('Deudor actualizado.','success');
