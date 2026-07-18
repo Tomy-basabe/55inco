@@ -642,12 +642,13 @@ function buildDashboard() {
     return sum;
   }, 0);
   const ventasTransfInt = intervalSales.reduce((sum, s) => {
-    if (s.payType === 'transferencia') return sum + s.totalFinal;
-    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.transfer || 0);
+    if (s.payType === 'debito') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.card || 0);
     return sum;
   }, 0);
   const ventasDeudorInt = intervalSales.reduce((sum, s) => {
     if (s.payType === 'deudor') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.debt || 0);
     return sum;
   }, 0);
 
