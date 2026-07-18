@@ -11,6 +11,8 @@ let currentUser = null;
 let cart = [];        // [{ product, qty, discount }]
 let salePayType = 'efectivo';
 let saleDebtorId = null;
+let dashStartDate = null;
+let dashEndDate = null;
 
 // ─── Helpers ──────────────────────────────────────────────
 function fmt(n) {
@@ -616,10 +618,39 @@ function renderView(v) {
 //  DASHBOARD
 // ══════════════════════════════════════════════════════════
 function buildDashboard() {
+  if (!dashStartDate) {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    dashStartDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  if (!dashEndDate) dashEndDate = today();
+
   const sales = DB.getSales();
   const today_str = today();
   const todaySales = sales.filter(s => s.date.startsWith(today_str) && !s.returned);
   
+  const intervalSales = sales.filter(s => {
+    if (s.returned) return false;
+    const d = s.date.slice(0,10);
+    return d >= dashStartDate && d <= dashEndDate;
+  });
+
+  const totalVendido = intervalSales.reduce((a, s) => a + s.totalFinal, 0);
+  const ventasEfectivoInt = intervalSales.reduce((sum, s) => {
+    if (s.payType === 'efectivo') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.cash || 0);
+    return sum;
+  }, 0);
+  const ventasTransfInt = intervalSales.reduce((sum, s) => {
+    if (s.payType === 'transferencia') return sum + s.totalFinal;
+    if (s.payType === 'multi' && s.splitDetails) return sum + (s.splitDetails.transfer || 0);
+    return sum;
+  }, 0);
+  const ventasDeudorInt = intervalSales.reduce((sum, s) => {
+    if (s.payType === 'deudor') return sum + s.totalFinal;
+    return sum;
+  }, 0);
+
   // Calculate cash sales total
   const cashSalesToday = todaySales.reduce((sum, s) => {
     if (s.payType === 'efectivo') return sum + s.totalFinal;
@@ -649,9 +680,51 @@ function buildDashboard() {
   const maxAmt = Math.max(...last7.map(d=>d.amt), 1);
 
   return `
-  <div class="view-header">
-    <h2>📊 Dashboard</h2>
-    <p>Resumen del negocio – ${new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+  <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+    <div>
+      <h2>📊 Dashboard</h2>
+      <p>Resumen del negocio – ${new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+    </div>
+    <div style="display:flex; gap: 10px; align-items: center; background: var(--bg2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
+      <div style="display:flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 11px; color: var(--text-3);">Desde</label>
+        <input type="date" id="dash-start" class="form-control" style="padding: 4px 8px; font-size: 13px;" value="${dashStartDate}">
+      </div>
+      <div style="display:flex; flex-direction: column; gap: 4px;">
+        <label style="font-size: 11px; color: var(--text-3);">Hasta</label>
+        <input type="date" id="dash-end" class="form-control" style="padding: 4px 8px; font-size: 13px;" value="${dashEndDate}">
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid" style="margin-bottom: 16px;">
+    <div class="stat-card" style="border-left: 4px solid var(--purple); cursor: pointer; transition: all 0.2s;" id="card-total-vendido">
+      <div class="stat-icon">📈</div>
+      <div class="stat-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Total Vendido (Período)</span>
+        <span style="font-size: 11px; color: var(--text-3); background: var(--bg3); padding: 2px 6px; border-radius: 4px;">Ver Desglose ▾</span>
+      </div>
+      <div class="stat-value text-purple" style="font-size:26px;">${fmt(totalVendido)}</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">${intervalSales.length} ventas en el período</div>
+    </div>
+  </div>
+
+  <div id="dash-breakdown" style="display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 16px; animation: fadeIn 0.2s ease;">
+    <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 14px; color: var(--text-2);">Desglose del período</h4>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
+        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">💵 Efectivo</div>
+        <div style="font-size: 18px; font-weight: 600; color: var(--green);">${fmt(ventasEfectivoInt)}</div>
+      </div>
+      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
+        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">🏦 Transferencia</div>
+        <div style="font-size: 18px; font-weight: 600; color: var(--accent);">${fmt(ventasTransfInt)}</div>
+      </div>
+      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
+        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">💳 Deudores</div>
+        <div style="font-size: 18px; font-weight: 600; color: var(--red);">${fmt(ventasDeudorInt)}</div>
+      </div>
+    </div>
   </div>
 
   <div class="stats-grid">
@@ -696,7 +769,37 @@ function buildDashboard() {
   </div>` : ''}
   `;
 }
-function bindDashboard() {}
+function bindDashboard() {
+  const ds = document.getElementById('dash-start');
+  const de = document.getElementById('dash-end');
+  
+  const updateDash = () => {
+    dashStartDate = ds.value;
+    dashEndDate = de.value;
+    const mc = document.getElementById('main-content');
+    if (mc) {
+      mc.innerHTML = buildDashboard();
+      bindDashboard();
+    }
+  };
+
+  if (ds && de) {
+    ds.addEventListener('change', updateDash);
+    de.addEventListener('change', updateDash);
+  }
+
+  const cardTotal = document.getElementById('card-total-vendido');
+  const breakdown = document.getElementById('dash-breakdown');
+  if (cardTotal && breakdown) {
+    cardTotal.addEventListener('click', () => {
+      if (breakdown.style.display === 'none') {
+        breakdown.style.display = 'block';
+      } else {
+        breakdown.style.display = 'none';
+      }
+    });
+  }
+}
 
 // ══════════════════════════════════════════════════════════
 //  EMPLEADOS
