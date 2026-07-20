@@ -2262,16 +2262,17 @@ function buildHistorial() {
       const debtor = s.debtorId ? DB.getDebtors().find(d=>d.id===s.debtorId) : null;
       const isReturned = s.returned === true;
       
-      return `<tr style="${isReturned ? 'opacity: 0.6;' : ''}">
+      return `<tr style="${isReturned ? 'background:rgba(255,200,0,0.08); border-left:3px solid var(--yellow);' : ''}">
         <td>${fmtDate(s.date)}</td>
         <td>
           ${s.items?.map(i=>`${i.name} x${i.qty}`).join(', ')}
-          ${isReturned ? '<span class="return-item-badge">Devolución</span>' : ''}
+          ${isReturned ? '<span style="display:inline-block; background:var(--yellow); color:#333; font-size:10px; font-weight:800; padding:2px 7px; border-radius:20px; margin-left:6px; text-transform:uppercase; vertical-align:middle;">Devuelta/Anulada</span>' : ''}
+          ${s.exchangeRef ? '<span style="display:inline-block; background:var(--purple); color:#fff; font-size:10px; font-weight:700; padding:2px 7px; border-radius:20px; margin-left:6px; vertical-align:middle;">Cambio</span>' : ''}
         </td>
         <td>${s.cashier||'-'}</td>
         <td>${payBadge}${debtor?` <small class="text-muted">${debtor.name}</small>`:''}</td>
         <td>${s.discountPct>0?`<span class="text-green">-${s.discountPct}%</span>`:'-'}</td>
-        <td class="text-accent" style="font-weight:700">${fmt(s.totalFinal)}</td>
+        <td class="${isReturned ? 'text-yellow' : 'text-accent'}" style="font-weight:700">${fmt(s.totalFinal)}</td>
         <td>
           <button class="btn btn-secondary btn-sm btn-icon" onclick="openSaleDetails('${s.id}')" title="Ver Detalle">👀</button>
         </td>
@@ -2838,22 +2839,59 @@ function exportHistorialCSV() {
 //  DEUDORES
 // ══════════════════════════════════════════════════════════
 function buildDeudores() {
-  const debtors = DB.getDebtors().sort((a,b) => a.name.localeCompare(b.name));
-  const debts = DB.getDebts();
+  const allDebtors = DB.getDebtors();
+  const allDebts = DB.getDebts();
+
+  // Filters from window state
+  const searchVal = (window._deudoresSearch || '').toLowerCase();
+  const sortBy = window._deudoresSort || 'name-asc';
+  const statusFilter = window._deudoresStatus || 'all';
+
+  let debtors = allDebtors.map(d => ({
+    ...d,
+    balance: DB.getDebtorBalance(d.id),
+    pendingCount: allDebts.filter(x => x.debtorId === d.id && !x.paid).length,
+    lastActivity: allDebts.filter(x => x.debtorId === d.id).sort((a,b) => new Date(b.date) - new Date(a.date))[0]?.date || d.createdAt || ''
+  }));
+
+  // Apply search
+  if (searchVal) debtors = debtors.filter(d => d.name.toLowerCase().includes(searchVal));
+
+  // Apply status filter
+  if (statusFilter === 'with-debt') debtors = debtors.filter(d => d.balance > 0);
+  else if (statusFilter === 'no-debt') debtors = debtors.filter(d => d.balance <= 0);
+
+  // Apply sort
+  debtors.sort((a, b) => {
+    switch(sortBy) {
+      case 'name-asc': return a.name.localeCompare(b.name);
+      case 'name-desc': return b.name.localeCompare(a.name);
+      case 'balance-desc': return b.balance - a.balance;
+      case 'balance-asc': return a.balance - b.balance;
+      case 'pending-desc': return b.pendingCount - a.pendingCount;
+      case 'pending-asc': return a.pendingCount - b.pendingCount;
+      case 'recent': return new Date(b.lastActivity) - new Date(a.lastActivity);
+      case 'oldest': return new Date(a.lastActivity) - new Date(b.lastActivity);
+      default: return 0;
+    }
+  });
 
   const cards = debtors.map(d => {
-    const balance = DB.getDebtorBalance(d.id);
-    const dDebts = debts.filter(x=>x.debtorId===d.id && !x.paid);
+    const balanceColor = d.balance > 0 ? 'var(--red)' : 'var(--green)';
+    const balanceStr = d.balance > 0 ? fmt(d.balance) : `¡Al día!`;
     return `
-    <div class="debtor-card" data-name="${d.name.toLowerCase()}">
+    <div class="debtor-card" data-name="${d.name.toLowerCase()}" data-balance="${d.balance}" data-pending="${d.pendingCount}">
       <div class="debtor-avatar">${initials(d.name)}</div>
       <div class="debtor-info">
         <div class="debtor-name">${d.name}</div>
         <div class="debtor-phone">${d.phone||'Sin teléfono'} · Recargo: ${d.surcharge}%</div>
-        <div style="font-size:12px;color:var(--text-3);margin-top:2px">${dDebts.length} deuda(s) pendiente(s)</div>
+        <div style="font-size:12px;color:var(--text-3);margin-top:2px">
+          ${d.pendingCount} deuda(s) pendiente(s)
+          ${d.lastActivity ? `· Última actividad: ${fmtDate(d.lastActivity)}` : ''}
+        </div>
       </div>
       <div style="text-align:right">
-        <div class="debtor-debt">${fmt(balance)}</div>
+        <div class="debtor-debt" style="color:${balanceColor}">${balanceStr}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="btn btn-secondary btn-sm" onclick="openDebtorDetail('${d.id}')">Ver</button>
           <button class="btn btn-ghost btn-sm" onclick="openEditDebtor('${d.id}')">✏️</button>
@@ -2863,39 +2901,71 @@ function buildDeudores() {
     </div>`;
   }).join('');
 
-  const totalDebt = debtors.reduce((sum,d)=>sum+DB.getDebtorBalance(d.id),0);
+  const totalDebt = allDebtors.reduce((sum, d) => sum + DB.getDebtorBalance(d.id), 0);
+  const withDebt = allDebtors.filter(d => DB.getDebtorBalance(d.id) > 0).length;
+
   return `
   <div class="view-header">
     <h2>💳 Lista de Deudores</h2>
-    <p>${debtors.length} deudor(es) · Deuda total: <strong class="text-red">${fmt(totalDebt)}</strong></p>
+    <p>${allDebtors.length} deudor(es) total · <strong class="text-red">${withDebt} con deuda</strong> · Deuda total: <strong class="text-red">${fmt(totalDebt)}</strong></p>
     <div class="view-actions">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="deudores-search" placeholder="Buscar deudor...">
-      </div>
       <button class="btn btn-primary" onclick="openNewDebtorModal()">➕ Nuevo deudor</button>
     </div>
   </div>
+
+  <div class="filter-container" style="flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+    <div class="search-box" style="flex:1; min-width:180px;">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="deudores-search" placeholder="Buscar por nombre..." value="${window._deudoresSearch || ''}" oninput="applyDeudoresFilters()">
+    </div>
+
+    <div class="filter-item">
+      <label>📊 Ordenar por</label>
+      <select id="deudores-sort" onchange="applyDeudoresFilters()">
+        <option value="name-asc" ${sortBy==='name-asc'?'selected':''}>Nombre A→Z</option>
+        <option value="name-desc" ${sortBy==='name-desc'?'selected':''}>Nombre Z→A</option>
+        <option value="balance-desc" ${sortBy==='balance-desc'?'selected':''}>Mayor deuda primero</option>
+        <option value="balance-asc" ${sortBy==='balance-asc'?'selected':''}>Menor deuda primero</option>
+        <option value="pending-desc" ${sortBy==='pending-desc'?'selected':''}>Más deudas pendientes</option>
+        <option value="pending-asc" ${sortBy==='pending-asc'?'selected':''}>Menos deudas pendientes</option>
+        <option value="recent" ${sortBy==='recent'?'selected':''}>Actividad más reciente</option>
+        <option value="oldest" ${sortBy==='oldest'?'selected':''}>Actividad más antigua</option>
+      </select>
+    </div>
+
+    <div class="filter-item">
+      <label>📌 Estado</label>
+      <select id="deudores-status" onchange="applyDeudoresFilters()">
+        <option value="all" ${statusFilter==='all'?'selected':''}>Todos</option>
+        <option value="with-debt" ${statusFilter==='with-debt'?'selected':''}>Solo con deuda</option>
+        <option value="no-debt" ${statusFilter==='no-debt'?'selected':''}>Al día (sin deuda)</option>
+      </select>
+    </div>
+
+    <button class="btn btn-ghost btn-sm" onclick="clearDeudoresFilters()">✖ Limpiar filtros</button>
+  </div>
+
   <div id="deudores-list">
-    ${cards || '<div class="empty-state"><div class="empty-icon">💳</div><p>No hay deudores registrados.</p></div>'}
+    ${debtors.length ? cards : '<div class="empty-state"><div class="empty-icon">💳</div><p>No se encontraron deudores con esos filtros.</p></div>'}
   </div>`;
 }
 
+function applyDeudoresFilters() {
+  window._deudoresSearch = el('deudores-search')?.value || '';
+  window._deudoresSort = el('deudores-sort')?.value || 'name-asc';
+  window._deudoresStatus = el('deudores-status')?.value || 'all';
+  renderView('view-deudores');
+}
+
+function clearDeudoresFilters() {
+  window._deudoresSearch = '';
+  window._deudoresSort = 'name-asc';
+  window._deudoresStatus = 'all';
+  renderView('view-deudores');
+}
+
 function bindDeudores() {
-  const searchInput = el('deudores-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', (e) => {
-      const val = e.target.value.toLowerCase();
-      document.querySelectorAll('#deudores-list .debtor-card').forEach(card => {
-        const name = card.dataset.name;
-        if (name.includes(val)) {
-          card.style.display = 'flex';
-        } else {
-          card.style.display = 'none';
-        }
-      });
-    });
-  }
+  // Filters are applied reactively via applyDeudoresFilters() / onchange / oninput
 }
 
 function openDebtorDetail(id) {
