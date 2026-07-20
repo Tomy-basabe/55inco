@@ -2392,7 +2392,7 @@ function openSaleDetails(saleId) {
         <span>TOTAL COBRADO:</span> <span>${fmt(sale.totalFinal)}</span>
       </div>
     </div>
-  `, \`<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>\`);
+  `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
 
 function applyHistorialFilters() {
