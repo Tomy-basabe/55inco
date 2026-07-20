@@ -2426,7 +2426,10 @@ function openSaleDetails(saleId) {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
-    ${!isReturned ? `<button id="btn-process-return" class="btn btn-danger" style="display:none;" onclick="processPartialReturn('${sale.id}')">Procesar Devolución</button>` : ''}
+    ${!isReturned ? `
+      <button id="btn-open-exchange" class="btn btn-warning" onclick="closeModal(); setTimeout(()=>openExchangeModal('${sale.id}'),200)">🔄 Cambio de Prenda</button>
+      <button id="btn-process-return" class="btn btn-danger" style="display:none;" onclick="processPartialReturn('${sale.id}')">Procesar Devolución</button>
+    ` : ''}
   `);
 }
 
@@ -2496,6 +2499,286 @@ function processPartialReturn(saleId) {
     toast('Devolución parcial procesada. Venta y stock actualizados.','success');
   }
   
+  closeModal();
+  renderView('view-historial');
+}
+
+// ══════════════════════════════════════════════════════════
+//  CAMBIO DE PRENDA
+// ══════════════════════════════════════════════════════════
+window._exchRetSel = {};
+window._exchSaleId = null;
+
+function openExchangeModal(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+  window._exchSaleId = saleId;
+  window._exchRetSel = {};
+
+  const prods = DB.getProducts();
+
+  const returnItemsHtml = sale.items.map((i, idx) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);">
+      <div>
+        <strong>${i.name}</strong> x${i.qty}
+        ${i.variantLabel ? `<span class="badge badge-purple" style="font-size:10px;">${i.variantLabel}</span>` : ''}
+        <div style="font-size:12px; color:var(--text-2)">${fmt(i.price)} c/u</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span style="font-size:11px; color:var(--text-3);">Devolver:</span>
+        <button class="btn btn-secondary btn-sm" style="padding:2px 8px" onclick="exchChangeQty(${idx},-1,${i.qty})">-</button>
+        <span id="exch-ret-${idx}" style="font-weight:800; min-width:18px; text-align:center;">0</span>
+        <button class="btn btn-secondary btn-sm" style="padding:2px 8px" onclick="exchChangeQty(${idx},1,${i.qty})">+</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Product options: include each variant as separate entry for clarity
+  const productOptions = prods
+    .filter(p => getTotalStock(p) > 0)
+    .flatMap(p => {
+      const variants = getVariants(p);
+      if (p.variants && p.variants.length > 1) {
+        return p.variants
+          .filter(v => v.stock > 0)
+          .map((v, vi) => `<option value="${p.id}__v${vi}" data-price="${v.price}">${p.name} – ${v.label} (${fmt(v.price)}) [Stock: ${v.stock}]</option>`);
+      }
+      return [`<option value="${p.id}" data-price="${variants[0].price}">${p.name}${p.talle ? ' Talle '+p.talle : ''} (${fmt(variants[0].price)}) [Stock: ${variants[0].stock}]</option>`];
+    }).join('');
+
+  openModal('🔄 Cambio de Prenda', `
+    <div style="margin-bottom:14px;">
+      <h4 style="margin:0 0 8px 0; font-size:14px; color:var(--text-1);">1️⃣ Prendas que devuelve el cliente:</h4>
+      ${returnItemsHtml}
+      <div style="background:var(--bg3); padding:8px 12px; border-radius:var(--r-sm); margin-top:10px; display:flex; justify-content:space-between;">
+        <span style="font-size:13px;">Crédito del cliente:</span>
+        <strong id="exch-credit" style="color:var(--green); font-size:15px;">$0</strong>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <h4 style="margin:0 0 8px 0; font-size:14px; color:var(--text-1);">2️⃣ Prenda nueva que se lleva:</h4>
+      <div class="form-group">
+        <select id="exch-new-product" onchange="updateExchangeCalc()" style="width:100%;">
+          <option value="">-- Seleccioná la prenda nueva --</option>
+          ${productOptions}
+        </select>
+      </div>
+    </div>
+    <div style="background:var(--bg2); padding:12px; border-radius:var(--r-sm); border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px;">
+        <span>Prenda nueva:</span> <span id="exch-new-val" style="color:var(--text-1);">$0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:13px; color:var(--green);">
+        <span>Crédito cliente:</span> <span id="exch-credit2">$0</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:2px dashed var(--border); font-size:16px; font-weight:800;">
+        <span id="exch-diff-label">Diferencia a cobrar:</span>
+        <span id="exch-diff-val" style="color:var(--accent);">$0</span>
+      </div>
+    </div>
+    <div id="exch-pay-area" style="display:none; margin-top:12px;">
+      <div class="form-group" style="margin-bottom:0">
+        <label>Método de pago de la diferencia</label>
+        <select id="exch-pay-type">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="debito">💳 Débito/Crédito</option>
+          <option value="deudor">📋 Deudor</option>
+        </select>
+      </div>
+    </div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+    <button id="btn-finalize-exch" class="btn btn-success" style="display:none;" onclick="finalizeExchange()">Confirmar Cambio ✅</button>
+  `);
+}
+
+function exchChangeQty(idx, delta, maxQty) {
+  const cur = window._exchRetSel[idx] || 0;
+  window._exchRetSel[idx] = Math.max(0, Math.min(cur + delta, maxQty));
+  const el_q = document.getElementById(`exch-ret-${idx}`);
+  if (el_q) el_q.innerText = window._exchRetSel[idx];
+  updateExchangeCalc();
+}
+
+function updateExchangeCalc() {
+  const saleId = window._exchSaleId;
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+
+  // Calculate credit from returned items
+  let credit = 0;
+  sale.items.forEach((item, idx) => {
+    const retQty = window._exchRetSel[idx] || 0;
+    credit += retQty * item.price;
+  });
+
+  // Get new product price
+  const selVal = document.getElementById('exch-new-product')?.value || '';
+  let newPrice = 0;
+  if (selVal) {
+    const opt = document.querySelector(`#exch-new-product option[value="${selVal}"]`);
+    if (opt) newPrice = parseFloat(opt.dataset.price) || 0;
+  }
+
+  const diff = newPrice - credit;
+
+  // Update UI
+  document.getElementById('exch-credit').innerText = fmt(credit);
+  document.getElementById('exch-credit2').innerText = fmt(credit);
+  document.getElementById('exch-new-val').innerText = fmt(newPrice);
+  
+  const diffLabel = document.getElementById('exch-diff-label');
+  const diffVal = document.getElementById('exch-diff-val');
+  if (diffLabel && diffVal) {
+    if (diff > 0) {
+      diffLabel.innerText = 'El cliente debe abonar:';
+      diffVal.style.color = 'var(--accent)';
+      diffVal.innerText = fmt(diff);
+    } else if (diff < 0) {
+      diffLabel.innerText = 'A devolver al cliente:';
+      diffVal.style.color = 'var(--green)';
+      diffVal.innerText = fmt(Math.abs(diff));
+    } else {
+      diffLabel.innerText = 'Sin diferencia (cambio exacto):';
+      diffVal.style.color = 'var(--text-2)';
+      diffVal.innerText = '$0';
+    }
+  }
+
+  const payArea = document.getElementById('exch-pay-area');
+  const btnFinalize = document.getElementById('btn-finalize-exch');
+  const hasSelection = selVal && credit > 0;
+  
+  if (payArea) payArea.style.display = (diff > 0 && hasSelection) ? 'block' : 'none';
+  if (btnFinalize) btnFinalize.style.display = hasSelection ? 'inline-block' : 'none';
+}
+
+function finalizeExchange() {
+  const saleId = window._exchSaleId;
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+
+  const selVal = document.getElementById('exch-new-product')?.value || '';
+  if (!selVal) { toast('Seleccioná la prenda nueva.', 'error'); return; }
+
+  const prods = DB.getProducts();
+  let totalItemsOriginally = sale.items.reduce((sum, i) => sum + i.qty, 0);
+  let totalItemsReturned = 0;
+  let credit = 0;
+  let newItems = [];
+  let newSubtotal = 0;
+
+  // Process returned items
+  sale.items.forEach((item, idx) => {
+    const retQty = window._exchRetSel[idx] || 0;
+    totalItemsReturned += retQty;
+    credit += retQty * item.price;
+
+    if (retQty > 0) {
+      const p = prods.find(x => x.id === item.productId);
+      if (p) {
+        const stockField = (item.variantIdx !== undefined && p.variants && p.variants[item.variantIdx]) 
+          ? null : 'stock';
+        if (stockField) {
+          DB.updateProduct(p.id, { stock: p.stock + retQty });
+        } else if (p.variants && item.variantIdx !== undefined) {
+          const newVariants = p.variants.map((v, vi) => vi === item.variantIdx ? { ...v, stock: v.stock + retQty } : v);
+          DB.updateProduct(p.id, { variants: newVariants });
+        }
+      }
+    }
+
+    const keptQty = item.qty - retQty;
+    if (keptQty > 0) {
+      newItems.push({ ...item, qty: keptQty });
+      newSubtotal += item.price * keptQty;
+    }
+  });
+
+  if (totalItemsReturned === 0) { toast('No seleccionaste ninguna prenda a devolver.', 'error'); return; }
+
+  // Determine new product
+  let newProductId, newVariantIdx;
+  if (selVal.includes('__v')) {
+    const [pid, vidStr] = selVal.split('__v');
+    newProductId = pid;
+    newVariantIdx = parseInt(vidStr);
+  } else {
+    newProductId = selVal;
+    newVariantIdx = undefined;
+  }
+
+  const newProd = prods.find(x => x.id === newProductId);
+  if (!newProd) { toast('Prenda nueva no encontrada.', 'error'); return; }
+
+  const variants = getVariants(newProd);
+  const newProdVariant = newVariantIdx !== undefined ? newProd.variants[newVariantIdx] : variants[0];
+  const newPrice = newProdVariant.price;
+  const newLabel = newVariantIdx !== undefined ? newProd.variants[newVariantIdx].label : null;
+
+  // Check stock of new product
+  if (newProdVariant.stock <= 0) { toast('Sin stock de la prenda nueva.', 'error'); return; }
+
+  // Deduct stock of new product
+  if (newVariantIdx !== undefined && newProd.variants) {
+    const updVariants = newProd.variants.map((v, vi) => vi === newVariantIdx ? { ...v, stock: v.stock - 1 } : v);
+    DB.updateProduct(newProductId, { variants: updVariants });
+  } else {
+    DB.updateProduct(newProductId, { stock: newProdVariant.stock - 1 });
+  }
+
+  // Calculate difference
+  const diff = newPrice - credit;
+  const payType = diff > 0 ? (document.getElementById('exch-pay-type')?.value || 'efectivo') : 'efectivo';
+  const totalFinal = Math.max(diff, 0); // if negative, it's free exchange (client has credit)
+
+  // Update original sale: remove returned items, recalculate
+  if (totalItemsReturned === totalItemsOriginally) {
+    // All returned — mark as returned
+    DB.updateSale(saleId, { returned: true });
+  } else {
+    const newDiscountAmt = newSubtotal * ((sale.discountPct || 0) / 100);
+    const newSurcharge = sale.surcharge > 0 && sale.subtotal > 0 ? (newSubtotal * (sale.surcharge / sale.subtotal)) : 0;
+    DB.updateSale(saleId, {
+      items: newItems,
+      subtotal: newSubtotal,
+      discountAmt: newDiscountAmt,
+      surcharge: newSurcharge,
+      totalFinal: newSubtotal - newDiscountAmt + newSurcharge
+    });
+  }
+
+  // Register the exchange as a new sale
+  const newSaleItem = {
+    productId: newProductId,
+    name: newProd.name,
+    price: newPrice,
+    qty: 1,
+    variantLabel: newLabel
+  };
+
+  const exchangeSale = DB.addSale({
+    items: [newSaleItem],
+    subtotal: newPrice,
+    discountPct: 0,
+    discountAmt: 0,
+    surcharge: 0,
+    totalFinal: totalFinal,
+    payType: totalFinal > 0 ? payType : 'efectivo',
+    cashier: currentUser.name,
+    exchangeRef: saleId,
+    creditApplied: credit,
+    note: `Cambio de prenda. Crédito aplicado: ${fmt(credit)}`
+  });
+
+  if (diff > 0) {
+    toast(`Cambio procesado. El cliente pagó ${fmt(diff)} de diferencia.`, 'success');
+  } else if (diff < 0) {
+    toast(`Cambio procesado. El cliente tiene ${fmt(Math.abs(diff))} de saldo a favor.`, 'success');
+  } else {
+    toast('Cambio procesado sin diferencia de precio.', 'success');
+  }
+
   closeModal();
   renderView('view-historial');
 }
