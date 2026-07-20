@@ -236,7 +236,7 @@ el('netflix-pin-form').addEventListener('submit', e => {
     
     const dateStr = today();
     const hoursData = DB.getHours();
-    const needsHours = (currentUser.role === 'cajero' && (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined));
+    const needsHours = (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined);
     const cashSess = DB.getCashSession(dateStr);
     const needsCash = !cashSess;
 
@@ -885,18 +885,20 @@ function bindMisGanancias() {
 function getWeekRange() {
   const now = new Date();
   const day = now.getDay();
-  const diff = now.getDate() - day;
-  const sunday = new Date(now.setDate(diff));
-  const saturday = new Date(sunday);
-  saturday.setDate(saturday.getDate() + 6);
+  const diff = day === 0 ? 6 : day - 1;
+  const start = new Date(now);
+  start.setDate(now.getDate() - diff);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const toLocalISO = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return {
-    from: sunday.toISOString().slice(0, 10),
-    to: saturday.toISOString().slice(0, 10)
+    from: toLocalISO(start),
+    to: toLocalISO(end)
   };
 }
 
 function buildEmpleados() {
-  const users = DB.getUsers().filter(u => u.role === 'cajero');
+  const users = DB.getUsers(); // Show both empleados and jefes
   
   if (!window._empleadosFromDate || !window._empleadosToDate) {
     const range = getWeekRange();
@@ -1106,7 +1108,7 @@ function renderHorasModal(userId, year, month) {
   for (let d = 1; d <= monthDays; d++) {
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = dateStr === todayStr;
-    const dow = new Date(dateStr).toLocaleDateString('es-AR',{weekday:'short'});
+    const dow = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'short'});
     const hrs = hoursData[dateStr] !== undefined ? hoursData[dateStr] : defaultH;
     daysHtml += `
     <div class="day-box ${isToday?'today':''}" onclick="editDayHours('${userId}','${dateStr}',${hrs},${defaultH})">
@@ -1138,7 +1140,7 @@ function renderHorasModal(userId, year, month) {
 }
 
 function editDayHours(userId, dateStr, currentHours, defaultHours) {
-  const day = new Date(dateStr).toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  const day = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
   openModal(`Editar horas – ${day}`, `
     <p class="text-muted mb-2">Ingresá cuántas horas trabajó este día:</p>
     <div class="form-group">
@@ -2271,6 +2273,7 @@ function buildHistorial() {
         <td>${s.discountPct>0?`<span class="text-green">-${s.discountPct}%</span>`:'-'}</td>
         <td class="text-accent" style="font-weight:700">${fmt(s.totalFinal)}</td>
         <td>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="openSaleDetails('${s.id}')" title="Ver Detalle">👀</button>
           ${!isReturned ? `<button class="btn btn-danger btn-sm btn-icon" onclick="processReturn('${s.id}')" title="Procesar Devolución/Cambio">🔄</button>` : '—'}
         </td>
       </tr>`;
@@ -2326,6 +2329,70 @@ function buildHistorial() {
       <tbody>${rows||'<tr><td colspan="7" style="text-align:center;color:var(--text-3)">Sin ventas en el rango seleccionado</td></tr>'}</tbody>
     </table>
   </div>`;
+}
+
+function openSaleDetails(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+
+  const debtor = sale.debtorId ? DB.getDebtors().find(d => d.id === sale.debtorId) : null;
+
+  const itemsHtml = sale.items.map(i => {
+    return `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
+      <div>
+        <strong>${i.name}</strong> x${i.qty}
+        ${i.variantLabel ? `<span style="font-size:10px; color:var(--text-3)">(${i.variantLabel})</span>` : ''}
+      </div>
+      <div>
+        <span>${fmt(i.price)}</span> c/u -> <strong>${fmt(i.price * i.qty)}</strong>
+      </div>
+    </div>`;
+  }).join('');
+
+  let payDetails = '';
+  if (sale.payType === 'multi' && sale.splitDetails) {
+    payDetails = `
+      <div style="margin-top:8px; font-size:13px;">
+        ${sale.splitDetails.cash > 0 ? `💵 Efectivo: <strong>${fmt(sale.splitDetails.cash)}</strong><br>` : ''}
+        ${sale.splitDetails.card > 0 ? `💳 Tarjeta: <strong>${fmt(sale.splitDetails.card)}</strong><br>` : ''}
+        ${sale.splitDetails.debt > 0 ? `📋 Deudor: <strong>${fmt(sale.splitDetails.debt)}</strong><br>` : ''}
+      </div>
+    `;
+  } else {
+    payDetails = `<strong>${sale.payType}</strong>`;
+  }
+
+  openModal('🔍 Detalle de Venta', `
+    <div style="background:var(--bg3); padding:12px; border-radius:var(--r-sm); margin-bottom:14px; font-size:13px;">
+      <strong>Fecha:</strong> ${fmtDate(sale.date)}<br/>
+      <strong>Cajero:</strong> ${sale.cashier}<br/>
+      <strong>Método de pago:</strong> ${payDetails}<br/>
+      ${debtor ? `<strong>Deudor:</strong> ${debtor.name}<br/>` : ''}
+      ${sale.returned ? `<strong class="text-red">¡Venta Devuelta / Anulada!</strong><br/>` : ''}
+    </div>
+    
+    <div style="margin-bottom:14px;">
+      <h4 style="margin:0 0 8px 0; font-size:14px;">Prendas:</h4>
+      ${itemsHtml}
+    </div>
+
+    <div style="background:var(--bg2); padding:12px; border-radius:var(--r-sm); border:1px solid var(--border);">
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+        <span>Subtotal:</span> <span>${fmt(sale.subtotal)}</span>
+      </div>
+      ${sale.discountAmt > 0 ? `
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--green);">
+        <span>Descuento (${sale.discountPct}%):</span> <span>-${fmt(sale.discountAmt)}</span>
+      </div>` : ''}
+      ${sale.surcharge > 0 ? `
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--yellow);">
+        <span>Recargo:</span> <span>+${fmt(sale.surcharge)}</span>
+      </div>` : ''}
+      <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:16px; font-weight:800; color:var(--accent);">
+        <span>TOTAL COBRADO:</span> <span>${fmt(sale.totalFinal)}</span>
+      </div>
+    </div>
+  `, \`<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>\`);
 }
 
 function applyHistorialFilters() {
