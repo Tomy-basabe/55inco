@@ -538,6 +538,18 @@ const DB = {
       }).then(({ error }) => { if (error) console.error('Error guardando horas en Supabase:', error); });
     }
   },
+  removeHoursForDay(userId, dateStr) {
+    const h = this.getHours();
+    if (h[userId] && h[userId][dateStr] !== undefined) {
+      delete h[userId][dateStr];
+      this.set(this.KEYS.hours, h);
+      this.addAuditLog('hours_delete', `Registro de horas eliminado – ${dateStr}`, { userId, dateStr });
+      if (this.supabase) {
+        this.supabase.from('hours').delete().match({ user_id: userId, date: dateStr })
+          .then(({ error }) => { if (error) console.error('Error borrando horas en Supabase:', error); });
+      }
+    }
+  },
   getHoursForMonth(userId, year, month) {
     const h = this.getHours();
     if (!h[userId]) return {};

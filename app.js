@@ -1120,8 +1120,8 @@ function renderHorasModal(userId, year, month) {
     const displayHrs = hasRecord ? hrs : (isFuture ? '—' : '?');
     const hrsColor = !hasRecord && !isFuture ? 'color:var(--red); opacity:0.7;' : hasRecord && hrs === 0 ? 'color:var(--text-3);' : '';
     daysHtml += `
-    <div class="day-box ${isToday?'today':''}" onclick="${isFuture?'':"editDayHours('" + userId + "','" + dateStr + "'," + (hrs||0) + "," + defaultH + ")"}"
-      style="${isFuture ? 'opacity:0.4; cursor:not-allowed;' : 'cursor:pointer;'}">
+    <div class="day-box ${isToday?'today':''}" onclick="editDayHours('${userId}','${dateStr}',${hrs||0},${defaultH})"
+      style="${isFuture ? 'opacity:0.4; cursor:pointer;' : 'cursor:pointer;'}">
       <div class="day-name">${dow} ${d}</div>
       <div class="day-hours" style="${hrsColor}">${displayHrs}${hasRecord ? 'h' : ''}</div>
     </div>`;
@@ -1167,9 +1167,17 @@ function editDayHours(userId, dateStr, currentHours, defaultHours) {
       <button class="btn btn-ghost btn-sm" onclick="el('day-hours-input').value=6">6 hs</button>
     </div>
   `, `
+    <button class="btn btn-danger" style="margin-right:auto;" onclick="deleteDayHours('${userId}','${dateStr}')">Borrar registro</button>
     <button class="btn btn-secondary" onclick="reopenHorasModal('${userId}','${dateStr}')">← Volver</button>
     <button class="btn btn-primary" onclick="saveDayHours('${userId}','${dateStr}')">Guardar</button>
   `);
+}
+
+function deleteDayHours(userId, dateStr) {
+  DB.removeHoursForDay(userId, dateStr);
+  toast('Registro eliminado','success');
+  const d = new Date(dateStr);
+  reopenHorasModal(userId, dateStr, d.getFullYear(), d.getMonth()+1);
 }
 
 function saveDayHours(userId, dateStr) {
