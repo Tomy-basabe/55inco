@@ -848,6 +848,7 @@ function buildMisGanancias() {
         <span style="color:var(--text-3)">-</span>
         <input type="date" id="mg-filter-to" value="${toD}" style="width:130px; font-size:12px; padding:4px; border:none; outline:none; background:transparent; color:var(--text);" />
       </div>
+      <button class="btn btn-secondary" onclick="openHorasEmpleado('${u.id}')">🕐 Editar mis horas</button>
     </div>
   </div>
   
@@ -1104,22 +1105,29 @@ function renderHorasModal(userId, year, month) {
   const monthName = new Date(year,month-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
   const todayStr = today();
 
+  let totalRecordedHours = 0;
   let daysHtml = '';
   for (let d = 1; d <= monthDays; d++) {
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = dateStr === todayStr;
+    const isFuture = dateStr > todayStr;
     const dow = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'short'});
-    const hrs = hoursData[dateStr] !== undefined ? hoursData[dateStr] : defaultH;
+    // Only show ACTUALLY recorded hours. If no record, show '--' (unregistered)
+    const hasRecord = hoursData[dateStr] !== undefined;
+    const hrs = hasRecord ? hoursData[dateStr] : (isFuture ? null : null);
+    if (hasRecord) totalRecordedHours += hrs;
+    
+    const displayHrs = hasRecord ? hrs : (isFuture ? '—' : '?');
+    const hrsColor = !hasRecord && !isFuture ? 'color:var(--red); opacity:0.7;' : hasRecord && hrs === 0 ? 'color:var(--text-3);' : '';
     daysHtml += `
-    <div class="day-box ${isToday?'today':''}" onclick="editDayHours('${userId}','${dateStr}',${hrs},${defaultH})">
+    <div class="day-box ${isToday?'today':''}" onclick="${isFuture?'':"editDayHours('" + userId + "','" + dateStr + "'," + (hrs||0) + "," + defaultH + ")"}"
+      style="${isFuture ? 'opacity:0.4; cursor:not-allowed;' : 'cursor:pointer;'}">
       <div class="day-name">${dow} ${d}</div>
-      <div class="day-hours">${hrs}</div>
+      <div class="day-hours" style="${hrsColor}">${displayHrs}${hasRecord ? 'h' : ''}</div>
     </div>`;
   }
 
-  const totalHours = Object.values(hoursData).reduce((a,b)=>a+b,0)
-    || (monthDays * defaultH);
-  const salary = DB.calcSalary(userId, year, month) || (monthDays * defaultH * (u.salaryHour||0));
+  const salary = totalRecordedHours * (u.salaryHour || 0);
 
   const prevMonth = month===1 ? [year-1,12] : [year,month-1];
   const nextMonth = month===12? [year+1,1]  : [year,month+1];
@@ -1130,11 +1138,16 @@ function renderHorasModal(userId, year, month) {
       <span style="flex:1;text-align:center;font-weight:700">${monthName}</span>
       <button class="btn btn-ghost btn-sm" onclick="renderHorasModal('${userId}',${nextMonth[0]},${nextMonth[1]})">▶</button>
     </div>
+    <div style="font-size:11px; color:var(--text-3); margin-bottom:8px; display:flex; gap:14px;">
+      <span style="color:var(--text-1);">Horas registradas</span>
+      <span>— = futuro</span>
+      <span style="color:var(--red);">? = sin registrar</span>
+    </div>
     <div class="hours-grid">${daysHtml}</div>
     <div class="divider"></div>
     <div class="flex-row">
-      <div><span class="text-muted">Total horas:</span> <strong>${totalHours}h</strong></div>
-      <div class="ml-auto"><span class="text-muted">Sueldo estimado:</span> <strong class="text-green">${fmt(totalHours*(u.salaryHour||0))}</strong></div>
+      <div><span class="text-muted">Total hs. registradas:</span> <strong>${totalRecordedHours}h</strong></div>
+      <div class="ml-auto"><span class="text-muted">Sueldo estimado:</span> <strong class="text-green">${fmt(salary)}</strong></div>
     </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
@@ -2971,9 +2984,26 @@ function bindDeudores() {
 function openDebtorDetail(id) {
   const debtor = DB.getDebtors().find(d=>d.id===id);
   if (!debtor) return;
-  const debts = DB.getDebts().filter(d=>d.debtorId===id);
+  let debts = DB.getDebts().filter(d=>d.debtorId===id);
   const sales = DB.getSales();
   const balance = DB.getDebtorBalance(id);
+
+  // Apply filters
+  const statusFilter = window._debtorDetailStatus || 'pending';
+  const sortBy = window._debtorDetailSort || 'date-desc';
+
+  if (statusFilter === 'pending') debts = debts.filter(d => !d.paid);
+  else if (statusFilter === 'paid') debts = debts.filter(d => d.paid);
+
+  debts.sort((a, b) => {
+    switch (sortBy) {
+      case 'date-desc': return new Date(b.date) - new Date(a.date);
+      case 'date-asc': return new Date(a.date) - new Date(b.date);
+      case 'amount-desc': return Math.abs(b.amount) - Math.abs(a.amount);
+      case 'amount-asc': return Math.abs(a.amount) - Math.abs(b.amount);
+      default: return 0;
+    }
+  });
 
   const cards = debts.map(debt => {
     const isAbono = debt.amount < 0;
@@ -3005,7 +3035,7 @@ function openDebtorDetail(id) {
     }
 
     const saleLink = debt.saleId
-      ? `<a href="#" onclick="viewSaleTicket('${debt.saleId}')" style="font-size:11px;color:var(--accent);text-decoration:underline;">Ver Ticket</a>`
+      ? `<a href="#" onclick="closeModal(); setTimeout(() => viewSaleTicket('${debt.saleId}'), 200)" style="font-size:11px;color:var(--accent);text-decoration:underline;">Ver Ticket</a>`
       : '';
 
     return `
@@ -3034,8 +3064,23 @@ function openDebtorDetail(id) {
       </div>
     </div>
     <div class="divider"></div>
+    
+    <div class="filter-container" style="gap:8px; margin-bottom:12px; font-size:12px;">
+      <select id="dd-status" onchange="window._debtorDetailStatus=this.value; openDebtorDetail('${id}')" style="flex:1; padding:4px;">
+        <option value="pending" ${statusFilter==='pending'?'selected':''}>Pendientes</option>
+        <option value="paid" ${statusFilter==='paid'?'selected':''}>Pagados/Cerrados</option>
+        <option value="all" ${statusFilter==='all'?'selected':''}>Todos los movs.</option>
+      </select>
+      <select id="dd-sort" onchange="window._debtorDetailSort=this.value; openDebtorDetail('${id}')" style="flex:1; padding:4px;">
+        <option value="date-desc" ${sortBy==='date-desc'?'selected':''}>Más recientes</option>
+        <option value="date-asc" ${sortBy==='date-asc'?'selected':''}>Más antiguos</option>
+        <option value="amount-desc" ${sortBy==='amount-desc'?'selected':''}>Mayor importe</option>
+        <option value="amount-asc" ${sortBy==='amount-asc'?'selected':''}>Menor importe</option>
+      </select>
+    </div>
+
     <div class="debt-cards-list">
-      ${cards || '<div class="empty-state" style="padding:24px 0"><div class="empty-icon">💳</div><p>Sin movimientos registrados.</p></div>'}
+      ${cards || '<div class="empty-state" style="padding:24px 0"><div class="empty-icon">💳</div><p>No hay movimientos con esos filtros.</p></div>'}
     </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
