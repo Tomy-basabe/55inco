@@ -2274,7 +2274,6 @@ function buildHistorial() {
         <td class="text-accent" style="font-weight:700">${fmt(s.totalFinal)}</td>
         <td>
           <button class="btn btn-secondary btn-sm btn-icon" onclick="openSaleDetails('${s.id}')" title="Ver Detalle">👀</button>
-          ${!isReturned ? `<button class="btn btn-danger btn-sm btn-icon" onclick="processReturn('${s.id}')" title="Procesar Devolución/Cambio">🔄</button>` : '—'}
         </td>
       </tr>`;
     } else {
@@ -2331,20 +2330,53 @@ function buildHistorial() {
   </div>`;
 }
 
+window._currentReturnSelection = {};
+
+function changeReturnQty(idx, delta, maxQty) {
+  const current = window._currentReturnSelection[idx] || 0;
+  let next = current + delta;
+  if (next < 0) next = 0;
+  if (next > maxQty) next = maxQty;
+  window._currentReturnSelection[idx] = next;
+  
+  const elQty = document.getElementById(`ret-qty-${idx}`);
+  if (elQty) elQty.innerText = next;
+  
+  const hasReturns = Object.values(window._currentReturnSelection).some(v => v > 0);
+  const btn = document.getElementById('btn-process-return');
+  if (btn) btn.style.display = hasReturns ? 'inline-block' : 'none';
+}
+
 function openSaleDetails(saleId) {
   const sale = DB.getSales().find(s => s.id === saleId);
   if (!sale) return;
 
   const debtor = sale.debtorId ? DB.getDebtors().find(d => d.id === sale.debtorId) : null;
+  const isReturned = sale.returned;
+  window._currentReturnSelection = {};
 
-  const itemsHtml = sale.items.map(i => {
-    return `<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border);">
+  const itemsHtml = sale.items.map((i, idx) => {
+    let returnHtml = '';
+    if (!isReturned) {
+      returnHtml = `
+        <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+          <span style="font-size:11px; color:var(--text-3); font-weight:bold;">DEVOLVER:</span>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px" onclick="changeReturnQty(${idx}, -1, ${i.qty})">-</button>
+          <span id="ret-qty-${idx}" style="font-weight:700; width:16px; text-align:center;">0</span>
+          <button class="btn btn-secondary btn-sm" style="padding:2px 8px" onclick="changeReturnQty(${idx}, 1, ${i.qty})">+</button>
+        </div>
+      `;
+    }
+
+    return `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border);">
       <div>
         <strong>${i.name}</strong> x${i.qty}
         ${i.variantLabel ? `<span style="font-size:10px; color:var(--text-3)">(${i.variantLabel})</span>` : ''}
+        ${returnHtml}
       </div>
-      <div>
-        <span>${fmt(i.price)}</span> c/u -> <strong>${fmt(i.price * i.qty)}</strong>
+      <div style="text-align:right;">
+        <span>${fmt(i.price)}</span> c/u<br/>
+        <strong>${fmt(i.price * i.qty)}</strong>
       </div>
     </div>`;
   }).join('');
@@ -2378,7 +2410,7 @@ function openSaleDetails(saleId) {
 
     <div style="background:var(--bg2); padding:12px; border-radius:var(--r-sm); border:1px solid var(--border);">
       <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-        <span>Subtotal:</span> <span>${fmt(sale.subtotal)}</span>
+        <span>Subtotal original:</span> <span>${fmt(sale.subtotal)}</span>
       </div>
       ${sale.discountAmt > 0 ? `
       <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--green);">
@@ -2386,13 +2418,86 @@ function openSaleDetails(saleId) {
       </div>` : ''}
       ${sale.surcharge > 0 ? `
       <div style="display:flex; justify-content:space-between; margin-bottom:4px; color:var(--yellow);">
-        <span>Recargo:</span> <span>+${fmt(sale.surcharge)}</span>
+        <span>Recargo original:</span> <span>+${fmt(sale.surcharge)}</span>
       </div>` : ''}
       <div style="display:flex; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:16px; font-weight:800; color:var(--accent);">
-        <span>TOTAL COBRADO:</span> <span>${fmt(sale.totalFinal)}</span>
+        <span>TOTAL ACTUAL:</span> <span>${fmt(sale.totalFinal)}</span>
       </div>
     </div>
-  `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
+    ${!isReturned ? `<button id="btn-process-return" class="btn btn-danger" style="display:none;" onclick="processPartialReturn('${sale.id}')">Procesar Devolución</button>` : ''}
+  `);
+}
+
+function processPartialReturn(saleId) {
+  const sale = DB.getSales().find(s => s.id === saleId);
+  if (!sale) return;
+
+  const prods = DB.getProducts();
+  let totalItemsReturned = 0;
+  let totalItemsOriginally = sale.items.reduce((sum, i) => sum + i.qty, 0);
+  
+  let newSubtotal = 0;
+  let newItems = [];
+
+  // Recalculate based on what is Kept vs Returned
+  sale.items.forEach((item, idx) => {
+    const retQty = window._currentReturnSelection[idx] || 0;
+    totalItemsReturned += retQty;
+    
+    if (retQty > 0) {
+      const p = prods.find(x => x.id === item.productId);
+      if (p) DB.updateProduct(p.id, { stock: p.stock + retQty });
+    }
+
+    const keptQty = item.qty - retQty;
+    if (keptQty > 0) {
+      newItems.push({ ...item, qty: keptQty });
+      newSubtotal += (item.price * keptQty);
+    }
+  });
+
+  if (totalItemsReturned === 0) {
+    toast('No hay prendas seleccionadas para devolver','error');
+    return;
+  }
+
+  if (totalItemsReturned === totalItemsOriginally) {
+    // Return completely
+    DB.updateSale(saleId, { returned: true });
+    if (sale.payType === 'deudor' && sale.debtorId) {
+      const debts = DB.getDebts();
+      const sDebt = debts.find(d => d.saleId === saleId && !d.paid);
+      if (sDebt) DB.payDebt(sDebt.id);
+    }
+    toast('Venta anulada totalmente y stock devuelto.','success');
+  } else {
+    // Partial return
+    const newDiscountAmt = newSubtotal * ((sale.discountPct || 0) / 100);
+    const newBaseTotal = newSubtotal - newDiscountAmt;
+    
+    let newSurcharge = 0;
+    if (sale.surcharge > 0 && sale.subtotal > 0) {
+      const surchargeRatio = sale.surcharge / sale.subtotal;
+      newSurcharge = newSubtotal * surchargeRatio;
+    }
+    
+    const newTotalFinal = newBaseTotal + newSurcharge;
+
+    DB.updateSale(saleId, {
+      items: newItems,
+      subtotal: newSubtotal,
+      discountAmt: newDiscountAmt,
+      surcharge: newSurcharge,
+      totalFinal: newTotalFinal
+    });
+    
+    toast('Devolución parcial procesada. Venta y stock actualizados.','success');
+  }
+  
+  closeModal();
+  renderView('view-historial');
 }
 
 function applyHistorialFilters() {
@@ -2444,169 +2549,7 @@ function exportHistorialCSV() {
   toast('Archivo CSV exportado con éxito','success');
 }
 
-function processReturn(saleId) {
-  const sale = DB.getSales().find(s=>s.id===saleId);
-  if (!sale) return;
-
-  openModal('Devolución y Cambio', `
-    <p class="text-muted mb-2">Estás procesando el cambio de la siguiente venta:</p>
-    <div style="background:var(--bg3);padding:12px;border-radius:var(--r-sm);border:1px solid var(--border);margin-bottom:14px;">
-      <strong>Fecha:</strong> ${fmtDate(sale.date)}<br/>
-      <strong>Cajero:</strong> ${sale.cashier}<br/>
-      <strong>Total pagado:</strong> <span class="text-accent">${fmt(sale.totalFinal)}</span>
-    </div>
-    <div class="form-group">
-      <label>¿Qué deseas hacer?</label>
-      <select id="return-action" onchange="toggleReturnActionUi(this.value)">
-        <option value="refund">Devolución total (Anulación y devolución de stock)</option>
-        <option value="exchange">Cambio de prenda (Generar saldo a favor/diferencia)</option>
-      </select>
-    </div>
-    <div id="exchange-ui" style="display:none;">
-      <div class="form-group">
-        <label>Seleccionar nueva prenda para el cambio</label>
-        <select id="exchange-product-select">
-          <option value="">Seleccionar prenda...</option>
-          ${DB.getProducts().map(p=>`<option value="${p.id}">${p.name} (${fmt(p.price)}) [Talle ${p.talle||'-'}]</option>`).join('')}
-        </select>
-      </div>
-      <p style="font-size:12px;" class="text-muted">Si la prenda nueva es más cara se cobrará la diferencia; si es más barata quedará como saldo o descuento a favor.</p>
-    </div>
-  `, `
-    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-danger" onclick="finalizeReturn('${saleId}')">Procesar 🔄</button>
-  `);
-}
-
-function toggleReturnActionUi(action) {
-  const exUi = el('exchange-ui');
-  if (exUi) exUi.style.display = action === 'exchange' ? 'block' : 'none';
-}
-
-function finalizeReturn(saleId) {
-  const sale = DB.getSales().find(s=>s.id===saleId);
-  if (!sale) return;
-  
-  const action = el('return-action').value;
-  const prods = DB.getProducts();
-
-  // Restore old items stock
-  sale.items?.forEach(item => {
-    const p = prods.find(x=>x.id===item.productId);
-    if (p) DB.updateProduct(p.id, { stock: p.stock + item.qty });
-  });
-
-  // Mark sale as returned
-  DB.updateSale(saleId, { returned: true });
-
-  if (action === 'refund') {
-    // If it was a debtor sale, eliminate debt
-    if (sale.payType === 'deudor' && sale.debtorId) {
-      const debts = DB.getDebts();
-      const sDebt = debts.find(d=>d.saleId === saleId && !d.paid);
-      if (sDebt) DB.payDebt(sDebt.id); // Mark paid as refund
-    }
-    toast('Venta anulada y stock devuelto con éxito.','success');
-  } else if (action === 'exchange') {
-    const newProductId = el('exchange-product-select').value;
-    if (!newProductId) { toast('Selecciona la nueva prenda','error'); return; }
-    
-    const newProduct = prods.find(x=>x.id===newProductId);
-    if (!newProduct) return;
-    if (newProduct.stock <= 0) { toast('Sin stock disponible de la prenda nueva.','error'); return; }
-
-    const originalPayed = sale.totalFinal;
-    const newPrice = newProduct.price;
-    const diff = newPrice - originalPayed;
-
-    // Deduct stock of new product
-    DB.updateProduct(newProduct.id, { stock: newProduct.stock - 1 });
-
-    if (diff > 0) {
-      // Customer has to pay difference
-      // Open a secondary fast checkout for difference
-      closeModal();
-      setTimeout(() => {
-        openFastDifferenceCheckout(sale, newProduct, diff);
-      }, 300);
-      return;
-    } else {
-      // Difference is negative or zero, simple exchange
-      DB.addSale({
-        items: [{ productId: newProduct.id, name: newProduct.name, price: newProduct.price, qty: 1 }],
-        subtotal: newProduct.price,
-        discountPct: 0,
-        discountAmt: 0,
-        surcharge: 0,
-        totalFinal: 0, // simple exchange under credit
-        payType: 'efectivo',
-        cashier: currentUser.name,
-        exchangeRef: saleId
-      });
-      toast('Cambio procesado sin costos adicionales.','success');
-    }
-  }
-  
-  closeModal();
-  renderView('view-historial');
-}
-
-function openFastDifferenceCheckout(oldSale, newProduct, diff) {
-  openModal('Cobrar Diferencia de Cambio', `
-    <p class="text-muted mb-2">El nuevo producto es más caro que el original por <strong>${fmt(diff)}</strong>.</p>
-    <div class="form-group">
-      <label>Método de pago de la diferencia</label>
-      <select id="diff-pay-type" onchange="toggleDiffDebtor(this.value)">
-        <option value="efectivo">💵 Efectivo</option>
-        <option value="debito">💳 Débito/Crédito</option>
-        <option value="deudor">📋 Deudor</option>
-      </select>
-    </div>
-    <div id="diff-debtor-area" style="display:none;">
-      <div class="form-group">
-        <label>Seleccionar Deudor</label>
-        <select id="diff-debtor-select">
-          ${DB.getDebtors().map(d=>`<option value="${d.id}">${d.name}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-  `, `
-    <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-success" onclick="finalizeExchangeDiff('${oldSale.id}','${newProduct.id}',${diff})">Cobrar y Terminar ✅</button>
-  `);
-}
-
-function toggleDiffDebtor(val) {
-  el('diff-debtor-area').style.display = val === 'deudor' ? 'block' : 'none';
-}
-
-function finalizeExchangeDiff(oldSaleId, newProductId, diff) {
-  const payType = el('diff-pay-type').value;
-  const debtorId = payType === 'deudor' ? el('diff-debtor-select').value : null;
-
-  const newProduct = DB.getProducts().find(x=>x.id===newProductId);
-
-  const sale = DB.addSale({
-    items: [{ productId: newProductId, name: newProduct.name, price: newProduct.price, qty: 1 }],
-    subtotal: newProduct.price,
-    discountPct: 0,
-    discountAmt: 0,
-    surcharge: 0,
-    totalFinal: diff,
-    payType,
-    debtorId,
-    cashier: currentUser.name,
-    exchangeRef: oldSaleId
-  });
-
-  if (payType === 'deudor' && debtorId) {
-    DB.addDebt({ debtorId, saleId: sale.id, amount: diff });
-  }
-
-  closeModal();
-  toast('¡Cambio y diferencia procesados!','success');
-  renderView('view-historial');
-}
+// (Removed old return logic)
 
 // ══════════════════════════════════════════════════════════
 //  DEUDORES
