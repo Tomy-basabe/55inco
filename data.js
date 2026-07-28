@@ -13,6 +13,21 @@ const DB = {
 
   init() {
     this.buildKeys(); // Initialize KEYS with default tenant on startup
+    // Clear any old/corrupted user cache so Supabase is always the source of truth
+    const oldKeys = ['users', '5inco.com_users', 'global_users'];
+    oldKeys.forEach(k => {
+      const data = localStorage.getItem(k);
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          // If users don't have emails, clear the cache so Supabase reloads
+          if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].username && !parsed[0].username.includes('@')) {
+            localStorage.removeItem(k);
+            console.log('Cleared stale user cache:', k);
+          }
+        } catch(e) {}
+      }
+    });
   },
 
   setTenant(email) {
