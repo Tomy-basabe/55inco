@@ -111,6 +111,87 @@ const DB = {
         commissionPct: u.commission_pct
       })));
 
+      const overlay2 = document.getElementById('supabase-loading-overlay');
+      if (overlay2) overlay2.style.display = 'none';
+      return true;
+    } catch (e) {
+      console.error('Fallo en sincronización con Supabase. Usando caché local.', e);
+      const overlay = document.getElementById('supabase-loading-overlay');
+      if (overlay) overlay.style.display = 'none';
+      return false;
+    }
+  },
+
+  async initTenantData() {
+    if (!this.supabase || !this.currentTenant) return;
+    // Tenant data is loaded on-demand after login
+    // For simplicity, we load all non-user tables filtered by tenant prefix
+    const prefix = this.currentTenant + '_%';
+    try {
+      const [
+        { data: categories },
+        { data: products },
+        { data: debtors },
+        { data: debts },
+        { data: sales },
+        { data: expenses },
+        { data: fixedExpenses },
+        { data: hours },
+        { data: cashSessions }
+      ] = await Promise.all([
+        this.supabase.from('categories').select('*'),
+        this.supabase.from('products').select('*'),
+        this.supabase.from('debtors').select('*'),
+        this.supabase.from('debts').select('*'),
+        this.supabase.from('sales').select('*'),
+        this.supabase.from('expenses').select('*'),
+        this.supabase.from('fixed_expenses').select('*'),
+        this.supabase.from('hours').select('*'),
+        this.supabase.from('cash_sessions').select('*')
+      ]);
+
+      this.set(this.KEYS.categories, categories || []);
+      this.set(this.KEYS.products, (products || []).map(p => ({
+        id: p.id, name: p.name, categoryId: p.category_id,
+        price: Number(p.price || 0), talle: p.talle,
+        stock: Number(p.stock || 0), variants: p.variants || []
+      })));
+      this.set(this.KEYS.debtors, debtors || []);
+      this.set(this.KEYS.debts, (debts || []).map(d => ({
+        id: d.id, debtorId: d.debtor_id,
+        amount: Number(d.amount || 0), paid: d.paid,
+        date: d.date, paidDate: d.paid_date,
+        saleId: d.sale_id, detail: d.detail || null
+      })));
+      this.set(this.KEYS.sales, (sales || []).map(s => ({
+        id: s.id, date: s.date,
+        totalFinal: Number(s.total_final || 0),
+        payType: s.pay_type, splitDetails: s.split_details,
+        returned: s.returned, ...(s.details || {})
+      })));
+      this.set(this.KEYS.expenses, expenses || []);
+      this.set(this.KEYS.fixedExpenses, fixedExpenses || []);
+
+      const hoursObj = {};
+      (hours || []).forEach(h => {
+        if (!hoursObj[h.user_id]) hoursObj[h.user_id] = {};
+        hoursObj[h.user_id][h.date] = Number(h.hours || 0);
+      });
+      this.set(this.KEYS.hours, hoursObj);
+
+      const cashObj = {};
+      (cashSessions || []).forEach(cs => {
+        cashObj[cs.date] = {
+          openingCash: Number(cs.opening_cash || 0),
+          active: cs.active, openedBy: cs.opened_by, openedAt: cs.opened_at
+        };
+      });
+      this.set(this.KEYS.cashSession, cashObj);
+    } catch (e) {
+      console.error('Error cargando datos del tenant:', e);
+    }
+  },
+
   async seedSupabase() {
     const users = [
       { id: 'u1', name: 'Andrea Tuta', username: 'andreatuta@5inco.com', password: '123456', role: 'jefe' },
