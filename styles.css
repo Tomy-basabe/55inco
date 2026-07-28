@@ -702,24 +702,32 @@ tr:hover td { background: var(--bg3); }
 }
 .mobile-bottom-nav .mobile-nav-items {
   display: flex;
-  justify-content: space-around;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
   align-items: center;
+}
+.mobile-bottom-nav .mobile-nav-items::-webkit-scrollbar {
+  display: none;
 }
 .mobile-bottom-nav .mobile-nav-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 8px;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
   border: none;
+  border-top: 3px solid transparent;
   background: transparent;
   color: var(--text-3);
   font-family: inherit;
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: color var(--transition);
-  min-width: 48px;
+  transition: all 0.2s ease;
+  min-width: 64px;
+  flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
 .mobile-bottom-nav .mobile-nav-btn .mobile-nav-icon {
@@ -728,10 +736,60 @@ tr:hover td { background: var(--bg3); }
 }
 .mobile-bottom-nav .mobile-nav-btn.active {
   color: var(--accent);
-  font-weight: 700;
+  font-weight: 800;
+  border-top-color: var(--accent);
+  background: rgba(255, 140, 0, 0.05); /* very subtle accent bg */
 }
 .mobile-bottom-nav .mobile-nav-btn:active {
-  transform: scale(0.92);
+  transform: scale(0.95);
+}
+
+/* ───── Floating Cart Button ───── */
+.floating-cart-btn {
+  display: none;
+  position: fixed;
+  bottom: 74px; /* Just above bottom nav */
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+  z-index: 850;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.floating-cart-btn.show {
+  display: flex;
+  animation: popIn 0.3s forwards;
+}
+@keyframes popIn {
+  0% { transform: scale(0) translateY(20px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.floating-cart-btn:active {
+  transform: scale(0.9);
+}
+.floating-cart-btn .floating-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--bg);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* ───── Mobile Hamburger ───── */
@@ -806,25 +864,14 @@ tr:hover td { background: var(--bg3); }
 @media (max-width: 768px) {
   html, body { overflow: auto; }
 
-  /* ─── Sidebar como panel lateral deslizable ─── */
+  /* ─── Sidebar is completely removed in mobile ─── */
   .sidebar {
-    position: fixed;
-    left: -260px;
-    top: 0;
-    bottom: 0;
-    width: 250px;
-    z-index: 900;
-    transition: left .3s ease;
-    box-shadow: none;
-  }
-  .sidebar.open {
-    left: 0;
-    box-shadow: 8px 0 30px rgba(0,0,0,.5);
+    display: none !important;
   }
 
   /* ─── Mobile Header ─── */
   .mobile-header { display: flex; }
-  .mobile-menu-btn { display: block; }
+  .mobile-menu-btn { display: none !important; } /* Hamburger menu hidden */
 
   /* ─── Mobile Bottom Navigation ─── */
   .mobile-bottom-nav { display: block; }
