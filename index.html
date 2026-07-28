@@ -35,29 +35,26 @@
 
 <!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
 <div id="page-login" class="page active">
-  <div class="login-bg">
-    <div class="netflix-container" id="netflix-profile-selection">
-      <h1 class="netflix-title">¿Quién está usando el sistema?</h1>
-      <div class="netflix-profiles-grid" id="netflix-profiles-list">
-        <!-- Rendered dynamically in app.js -->
+  <div class="login-bg" style="display:flex; align-items:center; justify-content:center; min-height:100vh; background: var(--bg2);">
+    <div class="netflix-pin-card" style="width: 100%; max-width: 360px; padding: 40px; border-radius: 12px; background: var(--bg); box-shadow: var(--shadow);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <img src="logo comida.png" alt="Logo" style="height: 60px; margin-bottom: 10px;">
+        <h2 style="font-size: 20px; font-weight: 700;">Iniciar Sesión</h2>
+        <p class="text-muted" style="font-size: 13px;">Ingresá con tu correo electrónico y contraseña</p>
       </div>
-      <button class="btn btn-secondary btn-sm" id="btn-change-pin-init" style="margin-top: 30px; opacity: 0.7;">⚙️ Cambiar PIN / Contraseña</button>
-    </div>
-
-    <!-- Netflix Pin Overlay -->
-    <div class="netflix-pin-overlay" id="netflix-pin-overlay" style="display:none;">
-      <div class="netflix-pin-card">
-        <button class="netflix-pin-back" id="btn-pin-back">← Volver</button>
-        <div class="netflix-avatar-large" id="pin-avatar-display">AT</div>
-        <h2 id="pin-user-name">Andrea Tuta</h2>
-        <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">Ingresá tu PIN de acceso</p>
-        
-        <form id="netflix-pin-form">
-          <input type="password" id="login-pin-input" maxlength="8" placeholder="PIN" required autofocus autocomplete="off" />
-          <div id="login-pin-error" class="alert-error" style="display:none; margin-top: 10px;"></div>
-          <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;">Ingresar ➔</button>
-        </form>
-      </div>
+      
+      <form id="email-login-form">
+        <div class="form-group">
+          <label style="font-size: 12px; font-weight: 600;">Correo Electrónico</label>
+          <input type="email" id="login-email" placeholder="tomas@5inco.com" required autofocus autocomplete="email" style="width:100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);" />
+        </div>
+        <div class="form-group" style="margin-top: 16px;">
+          <label style="font-size: 12px; font-weight: 600;">Contraseña</label>
+          <input type="password" id="login-pass" placeholder="••••••••" required autocomplete="current-password" style="width:100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg2); color: var(--text);" />
+        </div>
+        <div id="login-error" class="alert-error" style="display:none; margin-top: 16px; font-size: 13px;"></div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top: 24px; font-size: 14px; padding: 12px;">Ingresar ➔</button>
+      </form>
     </div>
   </div>
 </div>

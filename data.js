@@ -8,21 +8,31 @@ const DB = {
   SUPABASE_KEY: 'sb_publishable_y07f9bN1fLQ8_jCY-cFvyQ_s7YPylH0',
   supabase: null,
   isSynced: false,
+  currentTenant: '5inco.com',
+  KEYS: {},
 
-  // ── Keys ──────────────────────────────
-  KEYS: {
-    users:      '5inco_users',
-    categories: '5inco_categories',
-    products:   '5inco_products',
-    sales:      '5inco_sales',
-    debtors:    '5inco_debtors',
-    debts:      '5inco_debts',
-    hours:      '5inco_hours',
-    session:    '5inco_session',
-    expenses:   '5inco_expenses',
-    fixedExpenses:'5inco_fixed_expenses',
-    cashSession: '5inco_cash_session',
-    audit:      '5inco_audit',
+  setTenant(email) {
+    if (!email || !email.includes('@')) return;
+    this.currentTenant = email.split('@')[1].toLowerCase();
+    this.buildKeys();
+  },
+
+  buildKeys() {
+    const prefix = this.currentTenant + '_';
+    this.KEYS = {
+      users:      'global_users',
+      categories: prefix + 'categories',
+      products:   prefix + 'products',
+      sales:      prefix + 'sales',
+      debtors:    prefix + 'debtors',
+      debts:      prefix + 'debts',
+      hours:      prefix + 'hours',
+      session:    'global_session',
+      expenses:   prefix + 'expenses',
+      fixedExpenses: prefix + 'fixed_expenses',
+      cashSession: prefix + 'cash_session',
+      audit:      prefix + 'audit_logs',
+    };
   },
 
   // ── Generic helpers ───────────────────
@@ -37,7 +47,7 @@ const DB = {
   set(key, val) {
     localStorage.setItem(key, JSON.stringify(val));
   },
-  id() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
+  id() { return this.currentTenant + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
 
   // ── Supabase Init and Synchronization ──
   async initSupabase() {
@@ -55,37 +65,14 @@ const DB = {
       const overlay = document.getElementById('supabase-loading-overlay');
       if (overlay) overlay.style.display = 'flex';
 
-      // Cargar todas las tablas en paralelo
-      const [
-        { data: users, error: errUsers },
-        { data: categories, error: errCats },
-        { data: products, error: errProds },
-        { data: debtors, error: errDebtors },
-        { data: debts, error: errDebts },
-        { data: sales, error: errSales },
-        { data: expenses, error: errExpenses },
-        { data: fixedExpenses, error: errFixedExpenses },
-        { data: hours, error: errHours },
-        { data: cashSessions, error: errCashSessions }
-      ] = await Promise.all([
-        this.supabase.from('users').select('*'),
-        this.supabase.from('categories').select('*'),
-        this.supabase.from('products').select('*'),
-        this.supabase.from('debtors').select('*'),
-        this.supabase.from('debts').select('*'),
-        this.supabase.from('sales').select('*'),
-        this.supabase.from('expenses').select('*'),
-        this.supabase.from('fixed_expenses').select('*'),
-        this.supabase.from('hours').select('*'),
-        this.supabase.from('cash_sessions').select('*')
-      ]);
+      // Load ONLY users initially for login
+      const { data: users, error: errUsers } = await this.supabase.from('users').select('*');
 
-      if (errUsers || errCats || errProds || errDebtors || errDebts || errSales || errExpenses || errFixedExpenses || errHours || errCashSessions) {
-        console.error('Error cargando datos de Supabase:', { errUsers, errCats, errProds, errDebtors, errDebts, errSales, errExpenses, errFixedExpenses, errHours, errCashSessions });
-        throw new Error('Error al consultar tablas de Supabase');
+      if (errUsers) {
+        console.error('Error cargando usuarios de Supabase:', errUsers);
+        throw new Error('Error al consultar tabla users de Supabase');
       }
 
-      // Si la base de datos está vacía, sembramos datos iniciales
       if (!users || users.length === 0) {
         console.log('Base de datos vacía. Sembrando datos iniciales...');
         await this.seedSupabase();
@@ -93,95 +80,43 @@ const DB = {
         return true;
       }
 
-      // Mapear y actualizar la caché local
-      this.set(this.KEYS.users, users.map(u => ({
+      // MIGRATION: update old usernames to new emails
+      let migrated = false;
+      for (const u of users) {
+        if (!u.username.includes('@')) {
+          const newEmail = u.username === 'andrea' ? 'andreatuta@5inco.com' : u.username + '@5inco.com';
+          const newPass = '123456';
+          u.username = newEmail;
+          u.password = newPass;
+          await this.supabase.from('users').update({ username: newEmail, password: newPass }).eq('id', u.id);
+          migrated = true;
+        }
+      }
+      
+      // Check if stackhard master user exists
+      if (!users.find(u => u.username === 'stackhard@stackhard.com')) {
+        const adminUser = { id: 'master_admin_1', name: 'Admin', username: 'stackhard@stackhard.com', password: 'TOMAS2812', role: 'jefe', salary_hour: 0, default_hours: 0, commission_pct: 0 };
+        users.push(adminUser);
+        await this.supabase.from('users').insert([adminUser]);
+      }
+
+      this.set('users', users.map(u => ({
         id: u.id,
         name: u.name,
         username: u.username,
         password: u.password,
         role: u.role,
-        salaryHour: Number(u.salary_hour || 0),
-        defaultHours: Number(u.default_hours || 3.5),
-        commissionPct: Number(u.commission_pct || 0)
+        salaryHour: u.salary_hour,
+        defaultHours: u.default_hours,
+        commissionPct: u.commission_pct
       })));
-
-      this.set(this.KEYS.categories, categories);
-      
-      this.set(this.KEYS.products, products.map(p => ({
-        id: p.id,
-        name: p.name,
-        categoryId: p.category_id,
-        price: Number(p.price || 0),
-        talle: p.talle,
-        stock: Number(p.stock || 0),
-        variants: p.variants || []
-      })));
-
-      this.set(this.KEYS.debtors, debtors);
-
-      this.set(this.KEYS.debts, debts.map(d => ({
-        id: d.id,
-        debtorId: d.debtor_id,
-        amount: Number(d.amount || 0),
-        paid: d.paid,
-        date: d.date,
-        paidDate: d.paid_date,
-        saleId: d.sale_id,
-        detail: d.detail || null
-      })));
-
-      this.set(this.KEYS.sales, sales.map(s => ({
-        id: s.id,
-        date: s.date,
-        totalFinal: Number(s.total_final || 0),
-        payType: s.pay_type,
-        splitDetails: s.split_details,
-        returned: s.returned,
-        ...(s.details || {})
-      })));
-
-      this.set(this.KEYS.expenses, expenses);
-
-      this.set(this.KEYS.fixedExpenses, fixedExpenses);
-
-      // Reconstruir horas { userId: { 'YYYY-MM-DD': hs } }
-      const hoursObj = {};
-      hours.forEach(h => {
-        if (!hoursObj[h.user_id]) hoursObj[h.user_id] = {};
-        hoursObj[h.user_id][h.date] = Number(h.hours || 0);
-      });
-      this.set(this.KEYS.hours, hoursObj);
-
-      // Reconstruir sesiones de caja { dateStr: session }
-      const cashSessionsObj = {};
-      cashSessions.forEach(cs => {
-        cashSessionsObj[cs.date] = {
-          openingCash: Number(cs.opening_cash || 0),
-          active: cs.active,
-          openedBy: cs.opened_by,
-          openedAt: cs.opened_at
-        };
-      });
-      this.set(this.KEYS.cashSession, cashSessionsObj);
-
-      localStorage.setItem('5inco_seeded', '2');
-      this.isSynced = true;
-      console.log('Sincronización exitosa con Supabase.');
-      if (overlay) overlay.style.display = 'none';
-      return true;
-    } catch (e) {
-      console.error('Fallo en sincronización con Supabase. Usando caché local.', e);
-      const overlay = document.getElementById('supabase-loading-overlay');
-      if (overlay) overlay.style.display = 'none';
-      return false;
-    }
-  },
 
   async seedSupabase() {
     const users = [
-      { id: 'u1', name: 'Andrea Tuta', username: 'andrea', password: '2812', role: 'jefe' },
-      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
-      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
+      { id: 'u1', name: 'Andrea Tuta', username: 'andreatuta@5inco.com', password: '123456', role: 'jefe' },
+      { id: 'u2', name: 'Tomy',        username: 'tomy@5inco.com',   password: '123456', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
+      { id: 'u3', name: 'Flor',        username: 'flor@5inco.com',   password: '123456', role: 'cajero', salary_hour: 800, default_hours: 3.5 },
+      { id: 'u4', name: 'Admin',       username: 'stackhard@stackhard.com', password: 'TOMAS2812', role: 'jefe' }
     ];
     const categories = [
       { id: 'c1', name: 'Remeras' },
@@ -227,9 +162,10 @@ const DB = {
     if (this.supabase) return;
 
     const users = [
-      { id: 'u1', name: 'Andrea Tuta', username: 'andrea', password: '2812', role: 'jefe' },
-      { id: 'u2', name: 'Tomy',        username: 'tomy',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
-      { id: 'u3', name: 'Flor',        username: 'flor',   password: '2812', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
+      { id: 'u1', name: 'Andrea Tuta', username: 'andreatuta@5inco.com', password: '123456', role: 'jefe' },
+      { id: 'u2', name: 'Tomy',        username: 'tomy@5inco.com',   password: '123456', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
+      { id: 'u3', name: 'Flor',        username: 'flor@5inco.com',   password: '123456', role: 'cajero', salaryHour: 800, defaultHours: 3.5 },
+      { id: 'u4', name: 'Admin',       username: 'stackhard@stackhard.com', password: 'TOMAS2812', role: 'jefe' }
     ];
 
     if (!localStorage.getItem('5inco_seeded')) {

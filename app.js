@@ -200,74 +200,65 @@ el('modal-overlay').addEventListener('click', e => { if (e.target === el('modal-
   });
 })();
 
-// ─── Netflix Login & PIN Controls ──────────────────────────
-let selectedProfileUser = null;
+// ─── Login Controls ──────────────────────────
 
-function renderNetflixProfiles() {
-  const container = el('netflix-profiles-list');
-  if (!container) return;
-  
-  const users = DB.getUsers();
-  container.innerHTML = users.map(u => `
-    <div class="netflix-profile" onclick="selectNetflixProfile('${u.id}')">
-      <div class="netflix-avatar">${initials(u.name)}</div>
-      <div class="netflix-profile-name">${escapeHTML(u.name)}</div>
-    </div>
-  `).join('');
-}
-
-function selectNetflixProfile(userId) {
-  const user = DB.getUsers().find(u=>u.id===userId);
-  if (!user) return;
-  selectedProfileUser = user;
-  
-  el('pin-user-name').textContent = user.name;
-  el('pin-avatar-display').textContent = initials(user.name);
-  el('login-pin-input').value = '';
-  el('login-pin-error').style.display = 'none';
-  el('netflix-pin-overlay').style.display = 'flex';
-  
-  setTimeout(() => el('login-pin-input').focus(), 150);
-}
-
-el('btn-pin-back').addEventListener('click', () => {
-  el('netflix-pin-overlay').style.display = 'none';
-  selectedProfileUser = null;
-});
-
-el('netflix-pin-form').addEventListener('submit', e => {
-  e.preventDefault();
-  if (!selectedProfileUser) return;
-  
-  const pinEntered = el('login-pin-input').value.trim();
-  if (selectedProfileUser.password === pinEntered) {
-    el('login-pin-error').style.display = 'none';
-    el('netflix-pin-overlay').style.display = 'none';
-    currentUser = selectedProfileUser;
-    DB.setSession(selectedProfileUser);
+const loginForm = el('email-login-form');
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = el('login-email').value.trim();
+    const password = el('login-pass').value.trim();
+    const errorEl = el('login-error');
     
-    const dateStr = today();
-    const hoursData = DB.getHours();
-    const needsHours = (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined);
-    const cashSess = DB.getCashSession(dateStr);
-    const needsCash = !cashSess;
+    if (!email || !password) return;
 
-    if (needsHours && needsCash) {
-      promptOpeningCashAndHours(dateStr);
-    } else if (needsHours) {
-      promptOpeningHours(dateStr);
-    } else if (needsCash) {
-      promptOpeningCashBox(dateStr);
+    errorEl.style.display = 'none';
+
+    // 1. Authenticate user across ALL users (or we could rely on tenant isolation if users are strictly isolated, but username is globally unique usually)
+    // Actually we need to make sure the user exists
+    const users = DB.getUsers();
+    const user = users.find(u => u.username.toLowerCase() === email.toLowerCase());
+
+    if (user && user.password === password) {
+      // 2. Set tenant and fetch their data
+      DB.setTenant(email);
+      const loadingOverlay = document.getElementById('supabase-loading-overlay');
+      if (loadingOverlay) loadingOverlay.style.display = 'flex';
+      
+      try {
+        await DB.initTenantData();
+      } catch (err) {
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+        errorEl.textContent = 'Error al cargar los datos del local. Verificá tu conexión.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+      currentUser = user;
+      DB.setSession(user);
+      
+      const dateStr = today();
+      const hoursData = DB.getHours();
+      const needsHours = (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined);
+      const cashSess = DB.getCashSession(dateStr);
+      const needsCash = !cashSess;
+
+      if (needsHours && needsCash) {
+        promptOpeningCashAndHours(dateStr);
+      } else if (needsHours) {
+        promptOpeningHours(dateStr);
+      } else if (needsCash) {
+        promptOpeningCashBox(dateStr);
+      } else {
+        initApp();
+      }
     } else {
-      initApp();
+      errorEl.textContent = 'Correo electrónico o contraseña incorrectos.';
+      errorEl.style.display = 'block';
     }
-  } else {
-    el('login-pin-error').textContent = 'PIN incorrecto.';
-    el('login-pin-error').style.display = 'block';
-    el('login-pin-input').value = '';
-    el('login-pin-input').focus();
-  }
-});
+  });
+}
 
 function promptOpeningCashBox(dateStr) {
   openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Apertura de Caja Diaria', `
@@ -1139,9 +1130,15 @@ function bindEmpleados() {
 }
 
 function openNuevoEmpleado() {
+  const currentDomain = currentUser.username.split('@')[1];
   openModal('Nuevo Empleado', `
     <div class="form-group"><label>Nombre completo</label><input id="emp-name" type="text" placeholder="Nombre apellido"/></div>
-    <div class="form-group"><label>Usuario</label><input id="emp-user" type="text" placeholder="usuario"/></div>
+    <div class="form-group"><label>Correo (Usuario)</label>
+      <div style="display:flex; align-items:center;">
+        <input id="emp-user" type="text" placeholder="nombre" style="flex:1; border-top-right-radius:0; border-bottom-right-radius:0;"/>
+        <div style="padding: 12px; background: var(--bg2); border: 1px solid var(--border); border-left: none; border-top-right-radius: 8px; border-bottom-right-radius: 8px; font-size: 13px; color: var(--text-2);">@${currentDomain}</div>
+      </div>
+    </div>
     <div class="form-group"><label>Contraseña</label><input id="emp-pass" type="password" placeholder="••••••"/></div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
@@ -1156,14 +1153,25 @@ function openNuevoEmpleado() {
 
 function saveNuevoEmpleado() {
   const name = el('emp-name').value.trim();
-  const username = el('emp-user').value.trim();
+  let username = el('emp-user').value.trim();
   const password = el('emp-pass').value.trim();
   const salaryHour = parseFloat(el('emp-salary').value)||0;
   const defaultHours = parseFloat(el('emp-hours').value)||3.5;
   const commissionPct = parseFloat(el('emp-comm').value)||0;
+  
+  const currentDomain = currentUser.username.split('@')[1];
+  if (username && !username.includes('@')) {
+    username = username + '@' + currentDomain;
+  }
+  
   if (!name || !username || !password) { toast('Completa todos los campos requeridos.','error'); return; }
+  
+  if (username.split('@')[1] !== currentDomain) {
+    toast('El correo debe pertenecer a tu mismo local (@' + currentDomain + ')', 'error'); return;
+  }
+
   const users = DB.getUsers();
-  if (users.find(u=>u.username===username)) { toast('Ya existe ese usuario.','error'); return; }
+  if (users.find(u=>u.username.toLowerCase()===username.toLowerCase())) { toast('Ya existe ese usuario.','error'); return; }
   const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours, commissionPct };
   users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${escapeHTML(name)}"`);
   closeModal(); toast('Empleado creado.','success');
@@ -2240,8 +2248,8 @@ function confirmSale() {
   const dateStr = new Date().toISOString().split('T')[0];
   const todayReg = DB.getCashRegisters().find(r=>r.date === dateStr);
   if (!todayReg && currentUser.role !== 'jefe') {
-    toast('Debés abrir la caja chica del día antes de poder registrar ventas.', 'error');
-    return;
+    // Just warn but do not return
+    toast('Atención: La caja de hoy no ha sido inicializada.', 'error');
   }
   if (cart.length === 0) { toast('El carrito está vacío.','error'); return; }
   
@@ -3950,15 +3958,30 @@ function bindHistoricoAdmin() {
 async function startApp() {
   const users = DB.getUsers();
   
-  const bootUI = () => {
+  const bootUI = async () => {
     DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
-    renderNetflixProfiles();
+    
+    // We no longer render netflix profiles
+    // renderNetflixProfiles();
+    
     const session = DB.getSession();
     if (session && session.id) {
       const user = DB.getUsers().find(u=>u.id===session.id);
       if (user) {
         currentUser = user;
         
+        // Ensure tenant is loaded
+        DB.setTenant(user.username);
+        const loadingOverlay = document.getElementById('supabase-loading-overlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'flex';
+        
+        try {
+          await DB.initTenantData();
+        } catch (e) {
+          console.error("Error loading tenant data", e);
+        }
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+
         if (currentUser.role === 'cajero') {
           const dateStr = today();
           const hoursData = DB.getHours();
@@ -3978,7 +4001,7 @@ async function startApp() {
   if (users.length === 0) {
     // Si no hay caché local, esperamos a Supabase (primera vez)
     await DB.initSupabase();
-    bootUI();
+    await bootUI();
   } else {
     // Carga instantánea desde caché
     bootUI();
