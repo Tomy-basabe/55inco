@@ -83,7 +83,7 @@ function makeSearchableSelect(selectId, onChangeCb) {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'ss-search';
-    searchInput.placeholder = '🔍 Buscar...';
+    searchInput.placeholder = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg> Buscar...';
     searchInput.autocomplete = 'off';
     searchInput.style.cssText = 'width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;cursor:pointer;box-sizing:border-box;';
 
@@ -264,7 +264,7 @@ el('netflix-pin-form').addEventListener('submit', e => {
 });
 
 function promptOpeningCashBox(dateStr) {
-  openModal('📥 Apertura de Caja Diaria', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Apertura de Caja Diaria', `
     <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. Antes de realizar la primera venta del día, por favor ingresá el efectivo inicial que hay en caja chica:</p>
     <div class="form-group" style="margin-top: 15px;">
       <label>Efectivo Inicial en Caja ($)</label>
@@ -298,7 +298,7 @@ function saveOpeningCashBox(dateStr) {
 
 function promptOpeningCashAndHours(dateStr) {
   const defaultHours = currentUser.defaultHours || 3.5;
-  openModal('📥 Apertura de Caja y Jornada', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Apertura de Caja y Jornada', `
     <p class="text-muted mb-2">Hola <strong>${currentUser.name}</strong>. Por favor ingresá el efectivo inicial y tus horas a trabajar hoy:</p>
     <div class="form-group" style="margin-top: 15px;">
       <label>Efectivo Inicial en Caja ($)</label>
@@ -937,7 +937,7 @@ function buildMisGanancias() {
 
   return `
   <div class="view-header">
-    <h2>💰 Mis Ganancias</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Mis Ganancias</h2>
     <p>Resumen de tus horas y comisiones</p>
     <div class="view-actions">
       <div class="search-box" style="flex:unset; width:auto; padding: 4px 10px;">
@@ -955,7 +955,7 @@ function buildMisGanancias() {
   
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:20px;">
     <div class="stat-card">
-      <div class="stat-icon">🕐</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg></div>
       <div class="stat-label">Horas Trabajadas</div>
       <div class="stat-value">${totalHours}h <span style="font-size:14px;color:var(--text-3);font-weight:500;">(${fmt(u.salaryHour||0)}/h)</span></div>
       <div style="margin-top:8px;font-size:14px;color:var(--text-2);">Sueldo base: <strong>${fmt(baseSalary)}</strong></div>
@@ -1063,7 +1063,7 @@ function buildEmpleados() {
 
   return `
   <div class="view-header">
-    <h2>👥 Empleados</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"/></svg> Empleados</h2>
     <p>Gestión de sueldos y comisiones</p>
     <div class="view-actions">
       <div class="search-box" style="flex:unset; width:auto; padding: 4px 10px;">
@@ -1245,7 +1245,7 @@ function renderHorasModal(userId, year, month) {
   const prevMonth = month===1 ? [year-1,12] : [year,month-1];
   const nextMonth = month===12? [year+1,1]  : [year,month+1];
 
-  openModal(`🕐 Horas – ${u.name}`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg> Horas – ${u.name}`, `
     <div class="flex-row mb-2">
       <button class="btn btn-ghost btn-sm" onclick="renderHorasModal('${userId}',${prevMonth[0]},${prevMonth[1]})">◀</button>
       <span style="flex:1;text-align:center;font-weight:700">${monthName}</span>
@@ -1316,20 +1316,20 @@ function buildCategorias() {
   const rows = cats.map(c => {
     const count = prods.filter(p=>p.categoryId===c.id).length;
     return `<tr>
-      <td><span class="badge badge-purple">🏷️</span> ${c.name}</td>
+      <td><span class="badge badge-purple"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg></span> ${c.name}</td>
       <td>${count} prenda(s)</td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="openEditCat('${c.id}','${c.name.replace(/'/g,"\\'")}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCat('${c.id}')">🗑️</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditCat('${c.id}','${c.name.replace(/'/g,"\\'")}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCat('${c.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
       </td>
     </tr>`;
   }).join('');
   return `
   <div class="view-header">
-    <h2>🏷️ Categorías</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg> Categorías</h2>
     <p>Organizá tus prendas por categoría</p>
     <div class="view-actions">
-      <button class="btn btn-primary" onclick="openNewCat()">➕ Nueva categoría</button>
+      <button class="btn btn-primary" onclick="openNewCat()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Nueva categoría</button>
     </div>
   </div>
   <div class="table-wrap">
@@ -1359,7 +1359,7 @@ function openEditCat(id, name) {
   openModal('Editar Categoría', `
     <div class="form-group"><label>Nombre</label><input id="cat-edit-name" type="text" value="${name}"/></div>
   `, `
-    <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteCat('${id}'); closeModal();">🗑️ Eliminar</button>
+    <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteCat('${id}'); closeModal();"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Eliminar</button>
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditCat('${id}')">Guardar</button>
   `);
@@ -1429,18 +1429,18 @@ function buildStock() {
       <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : fmt(vars[0].price)}</td>
       <td><span class="badge ${totalStock<=2?'badge-red':totalStock<=5?'badge-yellow':'badge-green'}">${hasMulti ? totalStock + ' total' : totalStock}</span></td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="openEditProduct('${p.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑️</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditProduct('${p.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
       </td>
     </tr>`;
   }).join('');
 
   return `
   <div class="view-header">
-    <h2>👗 Stock</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg> Stock</h2>
     <p>Administrá tus prendas disponibles</p>
     <div class="view-actions">
-      <button class="btn btn-primary" onclick="openNewProduct()">➕ Nueva prenda</button>
+      <button class="btn btn-primary" onclick="openNewProduct()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Nueva prenda</button>
     </div>
   </div>
   ${filterBar}
@@ -1480,7 +1480,7 @@ function variantRowHtml(idx, label, price, stock) {
       <label style="font-size:11px;">Stock</label>
       <input class="vr-stock" type="number" value="${stock}" min="0" style="font-size:13px;"/>
     </div>
-    <button class="btn btn-danger btn-sm btn-icon btn-remove-vr" onclick="this.closest('.variant-row').remove()" title="Quitar">✕</button>
+    <button class="btn btn-danger btn-sm btn-icon btn-remove-vr" onclick="this.closest('.variant-row').remove()" title="Quitar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M18 6 6 18 M6 6l12 12"/></svg></button>
   </div>`;
 }
 
@@ -1521,8 +1521,8 @@ function openNewProduct(prefillCatId) {
 
     <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-weight:700;font-size:14px;">💰 Precios y Stock</span>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('np-variants')">➕ Agregar precio</button>
+        <span style="font-weight:700;font-size:14px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Precios y Stock</span>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('np-variants')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Agregar precio</button>
       </div>
       <div id="np-variants">
         ${variantRowHtml(0, 'Precio único', 0, 0)}
@@ -1590,15 +1590,15 @@ function openEditProduct(id) {
     </div>
     <div style="border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-top:8px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <span style="font-weight:700;font-size:14px;">💰 Precios y Stock</span>
-        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('ep-variants')">➕ Agregar precio</button>
+        <span style="font-weight:700;font-size:14px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Precios y Stock</span>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('ep-variants')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Agregar precio</button>
       </div>
       <div id="ep-variants">
         ${variantRowsHtml}
       </div>
     </div>
   `, `
-    <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteProduct('${id}'); closeModal();">🗑️ Eliminar</button>
+    <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteProduct('${id}'); closeModal();"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Eliminar</button>
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveEditProduct('${id}')">Guardar</button>
   `);
@@ -1653,7 +1653,7 @@ function buildVenta() {
     const priceDisplay = hasMulti ? getPriceRange(p) : fmt(getVariants(p)[0].price);
     return `
     <div class="product-card" data-id="${p.id}" data-cat="${p.categoryId}" onclick="addToCart('${p.id}')">
-      <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation(); openEditProductFromVenta('${p.id}')" style="position: absolute; top: 8px; right: 8px; font-size: 11px; z-index: 10; opacity: 0.7;" title="Editar Prenda">✏️</button>
+      <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation(); openEditProductFromVenta('${p.id}')" style="position: absolute; top: 8px; right: 8px; font-size: 11px; z-index: 10; opacity: 0.7;" title="Editar Prenda"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <div class="product-cat">${cat?.name||'Sin categoría'}</div>
       <div class="product-name" style="padding-right: 20px;">${p.name}</div>
       ${p.talle ? `<div class="product-talle">Talle: ${p.talle}</div>` : ''}
@@ -1664,28 +1664,28 @@ function buildVenta() {
 
   return `
   <div class="view-header">
-    <h2>🛒 Nueva Venta</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Nueva Venta</h2>
     <p>Seleccioná las prendas para agregar al carrito</p>
   </div>
   <div class="sale-layout">
     <div class="sale-products">
       <div class="flex-row mb-2">
         <div class="search-box" style="flex:1">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg></span>
           <input type="text" id="v-search" placeholder="Buscar prenda..." oninput="filterVentaProducts()"/>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="openNewProductFromVenta()">➕ Prenda</button>
-        <button class="btn btn-ghost btn-sm" onclick="openNewCatFromVenta()">🏷️ Categoría</button>
+        <button class="btn btn-ghost btn-sm" onclick="openNewProductFromVenta()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Prenda</button>
+        <button class="btn btn-ghost btn-sm" onclick="openNewCatFromVenta()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg> Categoría</button>
       </div>
       ${catFilters}
       <div class="product-grid" id="v-product-grid">
-        ${productCards || '<div class="empty-state"><div class="empty-icon">👗</div><p>No hay prendas cargadas aún.</p></div>'}
+        ${productCards || '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg></div><p>No hay prendas cargadas aún.</p></div>'}
       </div>
     </div>
 
     <div class="sale-cart">
       <div class="cart-box">
-        <div class="cart-header">🛒 Carrito <span id="cart-count" class="badge badge-purple" style="margin-left:8px">0</span></div>
+        <div class="cart-header"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Carrito <span id="cart-count" class="badge badge-purple" style="margin-left:8px">0</span></div>
         <div class="cart-items" id="cart-items-list">
           <div class="empty-state" style="padding:24px"><div class="empty-icon">🛍️</div><p>Agregá productos</p></div>
         </div>
@@ -1701,15 +1701,15 @@ function buildVenta() {
             <!-- Split Pay Details - Always Visible by Default -->
             <div id="multi-pay-details" class="split-pay-grid">
               <div class="split-pay-item">
-                <label>💵 Efectivo ($)</label>
+                <label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo ($)</label>
                 <input type="number" id="v-split-cash" value="0" min="0" oninput="validateSplitAmounts()"/>
               </div>
               <div class="split-pay-item">
-                <label>💳 Tarjeta ($)</label>
+                <label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta ($)</label>
                 <input type="number" id="v-split-card" value="0" min="0" oninput="validateSplitAmounts()"/>
               </div>
               <div class="split-pay-item" style="grid-column: span 2;">
-                <label>📋 Deudor ($)</label>
+                <label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor ($)</label>
                 <input type="number" id="v-split-debt" value="0" min="0" oninput="validateSplitAmounts()"/>
               </div>
             </div>
@@ -1717,7 +1717,7 @@ function buildVenta() {
             <div class="form-group" style="margin-top: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text-2); margin-bottom: 0;">
                 <input type="checkbox" id="v-card-surcharge-apply" onchange="validateSplitAmounts()"/>
-                <span>💳 Aplicar recargo a Tarjeta</span>
+                <span><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Aplicar recargo a Tarjeta</span>
               </label>
               <div style="display: flex; align-items: center; gap: 4px;">
                 <input type="number" id="v-card-surcharge-pct" value="10" min="0" max="100" style="width: 55px; padding: 2px 6px; font-size: 12px; height: 26px; text-align: center; border-radius: var(--r-sm); border: 1px solid var(--border); background: var(--bg2); color: var(--text-1);" oninput="validateSplitAmounts()"/>
@@ -1760,9 +1760,9 @@ function buildVenta() {
             </div>
 
             <button class="btn btn-primary btn-full" id="btn-confirm-sale" onclick="confirmSale()" style="margin-top:12px">
-              ✅ Confirmar Venta
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar Venta
             </button>
-            <button class="btn btn-ghost btn-full" onclick="clearCart()" style="margin-top:6px">🗑️ Limpiar carrito</button>
+            <button class="btn btn-ghost btn-full" onclick="clearCart()" style="margin-top:6px"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Limpiar carrito</button>
           </div>
         </div>
       </div>
@@ -1880,7 +1880,7 @@ function openVariantPicker(p) {
       </span>
     </button>
   `).join('');
-  openModal(`💰 ${p.name} – Elegí el precio`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> ${p.name} – Elegí el precio`, `
     <p class="text-muted" style="font-size:13px;margin-bottom:12px;">Este producto tiene varios precios. Seleccioná cuál agregar al carrito:</p>
     ${btns}
   `, '');
@@ -2056,7 +2056,7 @@ function validateSplitAmounts() {
     } else {
       el('ct-total').style.color = 'var(--accent)';
       btn.disabled = false;
-      btn.textContent = '✅ Confirmar Venta';
+      btn.textContent = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar Venta';
     }
   }
 }
@@ -2095,7 +2095,7 @@ function openNewProductFromVenta() {
   const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 
-  openModal('➕ Crear producto rápido', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Crear producto rápido', `
     <p class="text-muted" style="font-size:13px; margin-bottom:14px;">Creá el producto y se agregará automáticamente al carrito.</p>
     <div class="form-row cols-2">
       <div class="form-group">
@@ -2121,7 +2121,7 @@ function openNewProductFromVenta() {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-primary" onclick="saveQuickProductFromVenta()">✅ Crear y agregar al carrito</button>
+    <button class="btn btn-primary" onclick="saveQuickProductFromVenta()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Crear y agregar al carrito</button>
   `);
 
   makeSearchableSelect('qp-cat', (value, label) => {
@@ -2282,9 +2282,9 @@ function confirmSale() {
   // Show confirm modal
   let methodBadge = `
     <div style="font-size:12px;color:var(--text-2);text-align:right;">
-      💵 Efectivo: ${fmt(cashAmt)}<br/>
-      💳 Tarjeta: ${fmt(finalCardAmtWithSurcharge)} ${applyCardSurcharge ? `(con recargo ${cardSurchargePct}%)` : ''}<br/>
-      ${debtAmt > 0 ? `📋 Deudor (${debtorName}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: ${fmt(cashAmt)}<br/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: ${fmt(finalCardAmtWithSurcharge)} ${applyCardSurcharge ? `(con recargo ${cardSurchargePct}%)` : ''}<br/>
+      ${debtAmt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor (${debtorName}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
     </div>`;
 
   let directCashHtml = '';
@@ -2314,7 +2314,7 @@ function confirmSale() {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-success" onclick="finalizeSale(${totalFinal},${sub},${discAmt},${disc},${surcharge},1,${cashAmt},${finalCardAmtWithSurcharge},${finalDebtAmt})">✅ Confirmar</button>
+    <button class="btn btn-success" onclick="finalizeSale(${totalFinal},${sub},${discAmt},${disc},${surcharge},1,${cashAmt},${finalCardAmtWithSurcharge},${finalDebtAmt})"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar</button>
   `);
 }
 
@@ -2355,7 +2355,7 @@ function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti
   salePayType = 'efectivo';
   saleDebtorId = null;
   closeModal();
-  toast('¡Venta registrada exitosamente! 🎉','success');
+  toast('¡Venta registrada exitosamente! <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"/></svg>','success');
   renderView('view-venta');
 }
 
@@ -2384,12 +2384,12 @@ function buildHistorial() {
       const s = item;
       let payBadge = '';
       if (s.payType === 'multi') {
-        payBadge = '<span class="badge badge-purple">🥞 Multi-Pago</span>';
+        payBadge = '<span class="badge badge-purple"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 2l10 5-10 5-10-5z M12 22l10-5-10 5-10-5z M12 17l10-5-10 5-10-5z M12 12l10-5-10 5-10-5z"/></svg> Multi-Pago</span>';
       } else {
         payBadge = {
-          efectivo: '<span class="badge badge-green">💵 Efectivo</span>',
-          debito:   '<span class="badge badge-blue">💳 Débito/Créd.</span>',
-          deudor:   '<span class="badge badge-yellow">📋 Deudor</span>',
+          efectivo: '<span class="badge badge-green"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo</span>',
+          debito:   '<span class="badge badge-blue"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Débito/Créd.</span>',
+          deudor:   '<span class="badge badge-yellow"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor</span>',
         }[s.payType] || s.payType;
       }
       
@@ -2408,7 +2408,7 @@ function buildHistorial() {
         <td>${s.discountPct>0?`<span class="text-green">-${s.discountPct}%</span>`:'-'}</td>
         <td class="${isReturned ? 'text-yellow' : 'text-accent'}" style="font-weight:700">${fmt(s.totalFinal)}</td>
         <td>
-          <button class="btn btn-secondary btn-sm btn-icon" onclick="openSaleDetails('${s.id}')" title="Ver Detalle">👀</button>
+          <button class="btn btn-secondary btn-sm btn-icon" onclick="openSaleDetails('${s.id}')" title="Ver Detalle"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg></button>
         </td>
       </tr>`;
     } else {
@@ -2420,7 +2420,7 @@ function buildHistorial() {
       return `<tr style="background-color: var(--bg3);">
         <td>${fmtDate(d.date)}</td>
         <td>
-          ${isAbono ? '💸 Abono a Deuda' : '📝 Deuda Agregada'}${detailStr}
+          ${isAbono ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Abono a Deuda' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deuda Agregada'}${detailStr}
         </td>
         <td>-</td>
         <td><span class="badge ${isAbono ? 'badge-purple' : 'badge-yellow'}">Manual</span> <small class="text-muted">${debtorName}</small></td>
@@ -2438,10 +2438,10 @@ function buildHistorial() {
   
   return `
   <div class="view-header">
-    <h2>📋 Historial de Ventas</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Historial de Ventas</h2>
     <p>${filteredCombined.length} venta(s) mostrada(s) · Recaudado neto: <strong class="text-green">${fmt(total)}</strong></p>
     <div class="view-actions">
-      <button class="btn btn-secondary" onclick="exportHistorialCSV()">📥 Exportar Excel (CSV)</button>
+      <button class="btn btn-secondary" onclick="exportHistorialCSV()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Exportar Excel (CSV)</button>
     </div>
   </div>
 
@@ -2520,16 +2520,16 @@ function openSaleDetails(saleId) {
   if (sale.payType === 'multi' && sale.splitDetails) {
     payDetails = `
       <div style="margin-top:8px; font-size:13px;">
-        ${sale.splitDetails.cash > 0 ? `💵 Efectivo: <strong>${fmt(sale.splitDetails.cash)}</strong><br>` : ''}
-        ${sale.splitDetails.card > 0 ? `💳 Tarjeta: <strong>${fmt(sale.splitDetails.card)}</strong><br>` : ''}
-        ${sale.splitDetails.debt > 0 ? `📋 Deudor: <strong>${fmt(sale.splitDetails.debt)}</strong><br>` : ''}
+        ${sale.splitDetails.cash > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: <strong>${fmt(sale.splitDetails.cash)}</strong><br>` : ''}
+        ${sale.splitDetails.card > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: <strong>${fmt(sale.splitDetails.card)}</strong><br>` : ''}
+        ${sale.splitDetails.debt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor: <strong>${fmt(sale.splitDetails.debt)}</strong><br>` : ''}
       </div>
     `;
   } else {
     payDetails = `<strong>${sale.payType}</strong>`;
   }
 
-  openModal('🔍 Detalle de Venta', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg> Detalle de Venta', `
     <div style="background:var(--bg3); padding:12px; border-radius:var(--r-sm); margin-bottom:14px; font-size:13px;">
       <strong>Fecha:</strong> ${fmtDate(sale.date)}<br/>
       <strong>Cajero:</strong> ${sale.cashier}<br/>
@@ -2562,7 +2562,7 @@ function openSaleDetails(saleId) {
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>
     ${!isReturned ? `
-      <button id="btn-open-exchange" class="btn btn-warning" onclick="closeModal(); setTimeout(()=>openExchangeModal('${sale.id}'),200)">🔄 Cambio de Prenda</button>
+      <button id="btn-open-exchange" class="btn btn-warning" onclick="closeModal(); setTimeout(()=>openExchangeModal('${sale.id}'),200)"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5"/></svg> Cambio de Prenda</button>
       <button id="btn-process-return" class="btn btn-danger" style="display:none;" onclick="processPartialReturn('${sale.id}')">Procesar Devolución</button>
     ` : ''}
   `);
@@ -2681,7 +2681,7 @@ function openExchangeModal(saleId) {
       return [`<option value="${p.id}" data-price="${variants[0].price}">${p.name}${p.talle ? ' Talle '+p.talle : ''} (${fmt(variants[0].price)}) [Stock: ${variants[0].stock}]</option>`];
     }).join('');
 
-  openModal('🔄 Cambio de Prenda', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5"/></svg> Cambio de Prenda', `
     <div style="margin-bottom:14px;">
       <h4 style="margin:0 0 8px 0; font-size:14px; color:var(--text-1);">1️⃣ Prendas que devuelve el cliente:</h4>
       ${returnItemsHtml}
@@ -2715,15 +2715,15 @@ function openExchangeModal(saleId) {
       <div class="form-group" style="margin-bottom:0">
         <label>Método de pago de la diferencia</label>
         <select id="exch-pay-type">
-          <option value="efectivo">💵 Efectivo</option>
-          <option value="debito">💳 Débito/Crédito</option>
-          <option value="deudor">📋 Deudor</option>
+          <option value="efectivo"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo</option>
+          <option value="debito"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Débito/Crédito</option>
+          <option value="deudor"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor</option>
         </select>
       </div>
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button id="btn-finalize-exch" class="btn btn-success" style="display:none;" onclick="finalizeExchange()">Confirmar Cambio ✅</button>
+    <button id="btn-finalize-exch" class="btn btn-success" style="display:none;" onclick="finalizeExchange()">Confirmar Cambio <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg></button>
   `);
 }
 
@@ -3028,8 +3028,8 @@ function buildDeudores() {
         <div class="debtor-debt" style="color:${balanceColor}">${balanceStr}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="btn btn-secondary btn-sm" onclick="openDebtorDetail('${d.id}')">Ver</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEditDebtor('${d.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteDebtorConfirm('${d.id}')">🗑️</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditDebtor('${d.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn btn-danger btn-sm" onclick="deleteDebtorConfirm('${d.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
         </div>
       </div>
     </div>`;
@@ -3040,21 +3040,21 @@ function buildDeudores() {
 
   return `
   <div class="view-header">
-    <h2>💳 Lista de Deudores</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Lista de Deudores</h2>
     <p>${allDebtors.length} deudor(es) total · <strong class="text-red">${withDebt} con deuda</strong> · Deuda total: <strong class="text-red">${fmt(totalDebt)}</strong></p>
     <div class="view-actions">
-      <button class="btn btn-primary" onclick="openNewDebtorModal()">➕ Nuevo deudor</button>
+      <button class="btn btn-primary" onclick="openNewDebtorModal()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Nuevo deudor</button>
     </div>
   </div>
 
   <div class="filter-container" style="flex-wrap:wrap; gap:10px; margin-bottom:16px;">
     <div class="search-box" style="flex:1; min-width:180px;">
-      <span class="search-icon">🔍</span>
+      <span class="search-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg></span>
       <input type="text" id="deudores-search" placeholder="Buscar por nombre..." value="${window._deudoresSearch || ''}" oninput="applyDeudoresFilters()">
     </div>
 
     <div class="filter-item">
-      <label>📊 Ordenar por</label>
+      <label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 3v18h18 M18 17V9 M13 17V5 M8 17v-3"/></svg> Ordenar por</label>
       <select id="deudores-sort" onchange="applyDeudoresFilters()">
         <option value="name-asc" ${sortBy==='name-asc'?'selected':''}>Nombre A→Z</option>
         <option value="name-desc" ${sortBy==='name-desc'?'selected':''}>Nombre Z→A</option>
@@ -3068,7 +3068,7 @@ function buildDeudores() {
     </div>
 
     <div class="filter-item">
-      <label>📌 Estado</label>
+      <label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Estado</label>
       <select id="deudores-status" onchange="applyDeudoresFilters()">
         <option value="all" ${statusFilter==='all'?'selected':''}>Todos</option>
         <option value="with-debt" ${statusFilter==='with-debt'?'selected':''}>Solo con deuda</option>
@@ -3080,7 +3080,7 @@ function buildDeudores() {
   </div>
 
   <div id="deudores-list">
-    ${debtors.length ? cards : '<div class="empty-state"><div class="empty-icon">💳</div><p>No se encontraron deudores con esos filtros.</p></div>'}
+    ${debtors.length ? cards : '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg></div><p>No se encontraron deudores con esos filtros.</p></div>'}
   </div>`;
 }
 
@@ -3150,21 +3150,21 @@ function openDebtorDetail(id) {
       const sale = sales.find(s => s.id === debt.saleId);
       if (sale && sale.items && sale.items.length > 0) {
         const itemsList = sale.items.map(i => `${i.qty}x ${i.name}`).join(', ');
-        detailHtml = `<div class="debt-card-detail">🛒 Venta: ${itemsList}</div>`;
+        detailHtml = `<div class="debt-card-detail"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Venta: ${itemsList}</div>`;
       } else {
-        detailHtml = `<div class="debt-card-detail">🛒 Venta vinculada</div>`;
+        detailHtml = `<div class="debt-card-detail"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Venta vinculada</div>`;
       }
     } else if (debt.detail) {
-      detailHtml = `<div class="debt-card-detail">${isAbono ? '💸' : '📝'} ${debt.detail}</div>`;
+      detailHtml = `<div class="debt-card-detail">${isAbono ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg>'} ${debt.detail}</div>`;
     } else {
-      detailHtml = `<div class="debt-card-detail" style="color:var(--text-3)">${isAbono ? '💸 Abono / Pago manual' : '📝 Agregado manualmente'}</div>`;
+      detailHtml = `<div class="debt-card-detail" style="color:var(--text-3)">${isAbono ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Abono / Pago manual' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Agregado manualmente'}</div>`;
     }
 
     let actionHtml = '';
     if (debt.paid) {
       actionHtml = `<span style="font-size:11px;color:var(--text-3)">Cerrado: ${fmtDate(debt.paidDate)}</span>`;
     } else {
-      actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')">✅ ${isAbono ? 'Archivar' : 'Pagado'}</button>`;
+      actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> ${isAbono ? 'Archivar' : 'Pagado'}</button>`;
     }
 
     const saleLink = debt.saleId
@@ -3185,7 +3185,7 @@ function openDebtorDetail(id) {
     </div>`;
   }).join('');
 
-  openModal(`💳 ${debtor.name}`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> ${debtor.name}`, `
     <div class="flex-row mb-2">
       <div>
         <div style="font-size:13px;color:var(--text-2)">${debtor.phone||'Sin teléfono'}</div>
@@ -3213,7 +3213,7 @@ function openDebtorDetail(id) {
     </div>
 
     <div class="debt-cards-list">
-      ${cards || '<div class="empty-state" style="padding:24px 0"><div class="empty-icon">💳</div><p>No hay movimientos con esos filtros.</p></div>'}
+      ${cards || '<div class="empty-state" style="padding:24px 0"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg></div><p>No hay movimientos con esos filtros.</p></div>'}
     </div>
   `, `<button class="btn btn-secondary" onclick="closeModal()">Cerrar</button>`);
 }
@@ -3229,13 +3229,13 @@ function viewSaleTicket(saleId) {
   const splitHtml = sale.splitDetails ? `
     <hr class="divider"/>
     <div style="font-size:12px;color:var(--text-2);text-align:right;">
-      💵 Efectivo: ${fmt(sale.splitDetails.cash || 0)}<br/>
-      💳 Tarjeta: ${fmt(sale.splitDetails.card || 0)}<br/>
-      📋 Deudor: ${fmt(sale.splitDetails.debt || 0)}
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: ${fmt(sale.splitDetails.cash || 0)}<br/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: ${fmt(sale.splitDetails.card || 0)}<br/>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor: ${fmt(sale.splitDetails.debt || 0)}
     </div>
   ` : '';
 
-  openModal('📄 Ticket de Venta', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Ticket de Venta', `
     <div style="font-size:13px;color:var(--text-2);margin-bottom:16px;background:var(--bg-card);padding:10px;border-radius:6px;">
       <b>Fecha:</b> ${fmtDate(sale.date)}<br/>
       <b>Cajero/a:</b> ${sale.cashier || '-'}<br/>
@@ -3295,8 +3295,8 @@ function openEditDebtor(id) {
     <div class="form-group"><label>Recargo (%)</label><input id="ed-sur" type="number" value="${d.surcharge}"/></div>
     <div class="divider"></div>
     <div class="form-row cols-2">
-      <div class="form-group"><label>➕ Sumar deuda</label><input id="ed-add-debt" type="number" placeholder="$ a sumar" min="0"/></div>
-      <div class="form-group"><label>➖ Abonar (Restar)</label><input id="ed-sub-debt" type="number" placeholder="$ a restar" min="0"/></div>
+      <div class="form-group"><label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Sumar deuda</label><input id="ed-add-debt" type="number" placeholder="$ a sumar" min="0"/></div>
+      <div class="form-group"><label><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M5 12h14"/></svg> Abonar (Restar)</label><input id="ed-sub-debt" type="number" placeholder="$ a restar" min="0"/></div>
     </div>
     <div class="form-group"><label>Detalle (Opcional)</label><input id="ed-detail" type="text" placeholder="Motivo de la suma o abono"/></div>
   `, `
@@ -3375,9 +3375,9 @@ function buildGastos() {
       <td><strong>${f.name}</strong></td>
       <td>${fmt(f.amount)}</td>
       <td>
-        <button class="btn btn-success btn-sm" onclick="payFixedExpense('${f.id}')" title="Marcar como pagado este mes">💸 Pagar</button>
-        <button class="btn btn-ghost btn-sm" onclick="openEditFixedExpense('${f.id}')">✏️</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteFixedExpenseConfirm('${f.id}')">🗑️</button>
+        <button class="btn btn-success btn-sm" onclick="payFixedExpense('${f.id}')" title="Marcar como pagado este mes"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Pagar</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEditFixedExpense('${f.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFixedExpenseConfirm('${f.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
       </td>
     </tr>
   `).join('');
@@ -3394,7 +3394,7 @@ function buildGastos() {
       <td>${e.cashier ? `<small class="text-muted">${e.cashier}</small>` : 'Jefe'}</td>
       <td class="text-red" style="font-weight:700">-${fmt(e.amount)}</td>
       <td>
-        ${jefe ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteExpenseConfirm('${e.id}')">🗑️</button>` : '—'}
+        ${jefe ? `<button class="btn btn-danger btn-sm btn-icon" onclick="deleteExpenseConfirm('${e.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>` : '—'}
       </td>
     </tr>
   `).join('');
@@ -3409,28 +3409,28 @@ function buildGastos() {
           <div style="font-size:24px; font-weight:800; color:var(--accent); margin-top:2px;">${fmt(cashSess.openingCash)}</div>
           <div style="font-size:11px; color:var(--text-2); margin-top:4px;">Iniciada por <strong>${cashSess.openedBy}</strong> a las ${new Date(cashSess.openedAt).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'})}</div>
         </div>
-        ${jefe ? `<button class="btn btn-secondary btn-sm" onclick="promptOpeningCashBox('${dateStr}')">⚙️ Ajustar Caja Inicial</button>` : ''}
+        ${jefe ? `<button class="btn btn-secondary btn-sm" onclick="promptOpeningCashBox('${dateStr}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg> Ajustar Caja Inicial</button>` : ''}
       </div>`;
   } else {
     sessionHtml = `
       <div class="card" style="border-left: 4px solid var(--red); margin-bottom: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding: 16px 20px;">
         <div>
-          <div style="font-size:12px; color:var(--text-3); font-weight:700; text-transform:uppercase;">⚠️ Caja Diaria sin Abrir</div>
+          <div style="font-size:12px; color:var(--text-3); font-weight:700; text-transform:uppercase;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"/></svg> Caja Diaria sin Abrir</div>
           <p style="font-size:13px; color:var(--text-2); margin-top:4px;">No se ha registrado el efectivo inicial para el día de hoy.</p>
         </div>
-        <button class="btn btn-primary" onclick="promptOpeningCashBox('${dateStr}')">📥 Abrir Caja Chica</button>
+        <button class="btn btn-primary" onclick="promptOpeningCashBox('${dateStr}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Abrir Caja Chica</button>
       </div>`;
   }
 
   return `
   <div class="view-header">
-    <h2>💸 ${jefe ? 'Gastos y Caja' : 'Caja y Retiros'}</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> ${jefe ? 'Gastos y Caja' : 'Caja y Retiros'}</h2>
     <p>Control de efectivo en caja diaria ${jefe ? 'y costos mensuales' : ''}</p>
     <div class="view-actions">
-      <button class="btn btn-danger" onclick="openWithdrawCash()"><span style="margin-right:4px;">💸</span> Sacar Plata de Caja (Retiro)</button>
+      <button class="btn btn-danger" onclick="openWithdrawCash()"><span style="margin-right:4px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span> Sacar Plata de Caja (Retiro)</button>
       ${jefe ? `
-        <button class="btn btn-primary" onclick="openAddBoxExpense()">➕ Registrar Gasto General</button>
-        <button class="btn btn-secondary" onclick="openAddFixedTemplate()">⚙️ Configurar Servicio Fijo</button>
+        <button class="btn btn-primary" onclick="openAddBoxExpense()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Registrar Gasto General</button>
+        <button class="btn btn-secondary" onclick="openAddFixedTemplate()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg> Configurar Servicio Fijo</button>
       ` : ''}
     </div>
   </div>
@@ -3439,32 +3439,32 @@ function buildGastos() {
 
   <div class="stats-grid">
     <div class="stat-card" style="border-left: 4px solid var(--accent);">
-      <div class="stat-icon">📥</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg></div>
       <div class="stat-label">Caja Inicial Hoy</div>
       <div class="stat-value text-accent">${fmt(openingCash)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--green);">
-      <div class="stat-icon">💵</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg></div>
       <div class="stat-label">Ventas Efectivo Hoy</div>
       <div class="stat-value text-green">${fmt(cashSalesToday)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--blue);">
-      <div class="stat-icon">💳</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg></div>
       <div class="stat-label">Ventas Tarjeta Hoy</div>
       <div class="stat-value text-blue">${fmt(cardSalesToday)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--yellow);">
-      <div class="stat-icon">📋</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg></div>
       <div class="stat-label">Ventas Deudor Hoy</div>
       <div class="stat-value text-yellow">${fmt(debtorSalesToday)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--red);">
-      <div class="stat-icon">💸</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div class="stat-label">Retiros/Gastos Hoy</div>
       <div class="stat-value text-red">-${fmt(expensesToday)}</div>
     </div>
     <div class="stat-card" style="border-left: 4px solid var(--purple);">
-      <div class="stat-icon">💰</div>
+      <div class="stat-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div class="stat-label">Caja Esperada (Efectivo)</div>
       <div class="stat-value text-purple" style="font-size:24px;">${fmt(expectedCashInDrawer)}</div>
     </div>
@@ -3473,7 +3473,7 @@ function buildGastos() {
   ${jefe ? `
   <div class="section">
     <div class="section-header">
-      <span class="section-title">🏢 Servicios y Costos Fijos Mensuales (Alquiler, Luz, etc.)</span>
+      <span class="section-title"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M4 2v20 M20 2v20 M4 10h16 M4 14h16 M4 6h16 M4 18h16"/></svg> Servicios y Costos Fijos Mensuales (Alquiler, Luz, etc.)</span>
     </div>
     <div class="table-wrap">
       <table>
@@ -3488,7 +3488,7 @@ function buildGastos() {
 
   <div class="section">
     <div class="section-header">
-      <span class="section-title">📋 Libro Histórico de Gastos Realizados</span>
+      <span class="section-title"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Libro Histórico de Gastos Realizados</span>
     </div>
     <div class="table-wrap">
       <table>
@@ -3507,7 +3507,7 @@ function buildGastos() {
     })();
     return `
   <div class="section">
-    <div class="section-header"><span class="section-title">⏰ Mis Horas de Hoy</span></div>
+    <div class="section-header"><span class="section-title"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg> Mis Horas de Hoy</span></div>
     <div class="card" style="padding:20px;display:flex;flex-direction:column;gap:16px;">
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
         <div style="flex:1;">
@@ -3561,7 +3561,7 @@ function saveMyHoursManual() {
 }
 
 function openWithdrawCash() {
-  openModal('💸 Sacar Plata de Caja (Retiro)', `
+  openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Sacar Plata de Caja (Retiro)', `
     <p class="text-muted mb-2">Registrá una salida de dinero en efectivo de la caja chica:</p>
     <div class="form-group">
       <label>Monto a Retirar ($)</label>
@@ -3573,7 +3573,7 @@ function openWithdrawCash() {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-danger" onclick="saveWithdrawCash()">Confirmar Retiro 💸</button>
+    <button class="btn btn-danger" onclick="saveWithdrawCash()">Confirmar Retiro <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></button>
   `);
 }
 
@@ -3596,7 +3596,7 @@ function saveWithdrawCash() {
   const currentCash = openingCash + cashSalesToday - expensesToday;
 
   if (amount > currentCash) {
-    if (!confirm(`⚠️ Alerta: El monto a retirar (${fmt(amount)}) supera el efectivo estimado disponible en caja (${fmt(currentCash)}). ¿Deseas continuar de todas formas?`)) {
+    if (!confirm(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"/></svg> Alerta: El monto a retirar (${fmt(amount)}) supera el efectivo estimado disponible en caja (${fmt(currentCash)}). ¿Deseas continuar de todas formas?`)) {
       return;
     }
   }
@@ -3718,7 +3718,7 @@ function payFixedExpense(id) {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-success" onclick="finalizePayFixed('${f.name}')">Marcar Pago ✅</button>
+    <button class="btn btn-success" onclick="finalizePayFixed('${f.name}')">Marcar Pago <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg></button>
   `);
 }
 
@@ -3761,23 +3761,23 @@ function deleteExpenseConfirm(id) {
 // ══════════════════════════════════════════════════════════
 
 const AUDIT_LABELS = {
-  sale_create:      { icon: '🛒', label: 'Venta' },
-  sale_return:      { icon: '🔄', label: 'Devolución' },
-  expense_create:   { icon: '💸', label: 'Gasto' },
-  expense_delete:   { icon: '🗑️', label: 'Gasto Eliminado' },
-  category_create:  { icon: '🏷️', label: 'Cat. Creada' },
-  category_update:  { icon: '✏️', label: 'Cat. Editada' },
-  category_delete:  { icon: '🗑️', label: 'Cat. Eliminada' },
-  product_create:   { icon: '👗', label: 'Prenda Creada' },
-  product_update:   { icon: '✏️', label: 'Prenda Editada' },
-  product_delete:   { icon: '🗑️', label: 'Prenda Eliminada' },
-  debtor_create:    { icon: '👤', label: 'Deudor Creado' },
-  debtor_update:    { icon: '✏️', label: 'Deudor Editado' },
-  debtor_delete:    { icon: '🗑️', label: 'Deudor Eliminado' },
-  debt_paid:        { icon: '✅', label: 'Deuda Cobrada' },
-  hours_adjust:     { icon: '🕐', label: 'Horas Ajust.' },
-  cash_open:        { icon: '📥', label: 'Apertura Caja' },
-  user_update:      { icon: '👥', label: 'Empleado' },
+  sale_create:      { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>', label: 'Venta' },
+  sale_return:      { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5"/></svg>', label: 'Devolución' },
+  expense_create:   { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>', label: 'Gasto' },
+  expense_delete:   { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>', label: 'Gasto Eliminado' },
+  category_create:  { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg>', label: 'Cat. Creada' },
+  category_update:  { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: 'Cat. Editada' },
+  category_delete:  { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>', label: 'Cat. Eliminada' },
+  product_create:   { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg>', label: 'Prenda Creada' },
+  product_update:   { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: 'Prenda Editada' },
+  product_delete:   { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>', label: 'Prenda Eliminada' },
+  debtor_create:    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>', label: 'Deudor Creado' },
+  debtor_update:    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', label: 'Deudor Editado' },
+  debtor_delete:    { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>', label: 'Deudor Eliminado' },
+  debt_paid:        { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg>', label: 'Deuda Cobrada' },
+  hours_adjust:     { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg>', label: 'Horas Ajust.' },
+  cash_open:        { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg>', label: 'Apertura Caja' },
+  user_update:      { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"/></svg>', label: 'Empleado' },
 };
 
 function buildHistoricoAdmin() {
@@ -3790,7 +3790,7 @@ function buildHistoricoAdmin() {
 
   return `
   <div class="view-header">
-    <h2>🕵️ Historial Completo</h2>
+    <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg> Historial Completo</h2>
     <p>Registro de absolutamente todos los movimientos del sistema</p>
   </div>
 
@@ -3823,8 +3823,8 @@ function buildHistoricoAdmin() {
         <input type="text" id="audit-search" placeholder="Palabras clave..." style="font-size:13px;"/>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-primary btn-sm" onclick="applyAuditFilters()">🔍 Filtrar</button>
-        <button class="btn btn-ghost btn-sm" onclick="clearAuditFilters()">✕ Limpiar</button>
+        <button class="btn btn-primary btn-sm" onclick="applyAuditFilters()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg> Filtrar</button>
+        <button class="btn btn-ghost btn-sm" onclick="clearAuditFilters()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M18 6 6 18 M6 6l12 12"/></svg> Limpiar</button>
       </div>
     </div>
   </div>
@@ -3851,7 +3851,7 @@ function buildHistoricoAdmin() {
 function renderAuditRows(logs) {
   if (!logs.length) return '<tr><td colspan="4" style="text-align:center;color:var(--text-3);padding:30px;">Sin registros para mostrar</td></tr>';
   return logs.map(log => {
-    const meta = AUDIT_LABELS[log.action] || { icon: '📌', label: log.action };
+    const meta = AUDIT_LABELS[log.action] || { icon: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>', label: log.action };
     return `<tr>
       <td style="white-space:nowrap;font-size:12px;">${fmtDate(log.date)}</td>
       <td><span style="font-weight:600;">${log.userName || '-'}</span></td>
