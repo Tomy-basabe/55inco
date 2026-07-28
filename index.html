@@ -14,6 +14,8 @@
   <meta name="theme-color" content="#0d0f14" />
   <link rel="apple-touch-icon" href="logo.png" />
   <link rel="stylesheet" href="styles.css" />
+  <!-- Lucide Icons (SVG icon set) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script>
     (function() {
       const theme = localStorage.getItem('theme') || 'dark';
@@ -33,7 +35,9 @@
 </style>
 
 <button id="theme-toggle" class="btn-theme-toggle" title="Cambiar tema">
-  <span class="theme-icon">🌙</span>
+  <span class="theme-icon">
+    <i data-lucide="moon" style="width:16px;height:16px;"></i>
+  </span>
 </button>
 
 <!-- ═══════════════════════════ LOGIN ═══════════════════════════ -->
@@ -104,7 +108,10 @@
     <nav class="sidebar-nav" id="sidebar-nav"></nav>
 
     <div class="sidebar-footer">
-      <button class="btn-logout" id="btn-logout">⏻ Cerrar sesión</button>
+      <button class="btn-logout" id="btn-logout" style="display:flex;align-items:center;gap:8px;">
+        <i data-lucide="log-out" style="width:14px;height:14px;"></i>
+        Cerrar sesión
+      </button>
     </div>
   </aside>
 

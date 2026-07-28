@@ -44,7 +44,11 @@ function showView(id) {
 }
 function toast(msg, type = 'info') {
   const tc = el('toast-container');
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const icons = {
+    success: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    info:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
   const div = document.createElement('div');
   div.className = `toast ${type}`;
   div.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
@@ -126,7 +130,7 @@ function makeSearchableSelect(selectId, onChangeCb) {
       renderOptions(searchInput.value === (options.find(o=>o.value===sel.value)?.label||'') ? '' : searchInput.value);
       dropdown.style.display = 'block';
       searchInput.style.borderColor = 'var(--accent)';
-      searchInput.style.boxShadow = '0 0 0 3px rgba(124,110,248,.2)';
+      searchInput.style.boxShadow = '0 0 0 3px rgba(var(--accent-rgb), .18);';
     });
     searchInput.addEventListener('input', () => {
       renderOptions(searchInput.value);
@@ -171,7 +175,9 @@ el('modal-overlay').addEventListener('click', e => { if (e.target === el('modal-
   const updateIcon = (theme) => {
     const iconSpan = toggleBtn.querySelector('.theme-icon');
     if (iconSpan) {
-      iconSpan.textContent = theme === 'light' ? '☀️' : '🌙';
+      iconSpan.innerHTML = theme === 'light'
+        ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
     }
   };
 
@@ -437,7 +443,7 @@ function renderSidebar() {
       <div class="user-avatar">${initials(currentUser.name)}</div>
       <div>
         <div class="user-name">${currentUser.name}</div>
-        <span class="role-badge ${currentUser.role}">${currentUser.role === 'jefe' ? '👑 Jefe' : '💼 Cajero'}</span>
+        <span class="role-badge ${currentUser.role}">${currentUser.role === 'jefe' ? 'Administrador' : 'Vendedor'}</span>
       </div>
     </div>`;
 
@@ -445,33 +451,49 @@ function renderSidebar() {
   const jefe = currentUser.role === 'jefe';
 
   let html = '';
+  // SVG icon helper (inline Lucide-style)
+  const NAV_ICONS = {
+    dashboard:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></rect></svg>',
+    empleados:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    stock:       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    categorias:  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    gastos:      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    historial:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M3 9h18M9 21V9"/></svg>',
+    venta:       '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+    histList:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+    deudores:    '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    ganancias:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    adminHist:   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    cajaCierre:  '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+  };
+
   if (jefe) {
     html += navSection('Principal', [
-      { view: 'view-dashboard', icon: '📊', label: 'Dashboard' },
+      { view: 'view-dashboard', icon: NAV_ICONS.dashboard, label: 'Dashboard' },
     ]);
     html += navSection('Gestión', [
-      { view: 'view-empleados', icon: '👥', label: 'Empleados' },
-      { view: 'view-stock',     icon: '👗', label: 'Stock' },
-      { view: 'view-categorias',icon: '🏷️',  label: 'Categorías' },
-      { view: 'view-gastos',    icon: '💸',  label: 'Gastos y Caja' },
+      { view: 'view-empleados',  icon: NAV_ICONS.empleados,  label: 'Empleados' },
+      { view: 'view-stock',      icon: NAV_ICONS.stock,      label: 'Stock' },
+      { view: 'view-categorias', icon: NAV_ICONS.categorias, label: 'Categorías' },
+      { view: 'view-gastos',     icon: NAV_ICONS.gastos,     label: 'Gastos y Caja' },
     ]);
     html += navSection('Reportes', [
-      { view: 'view-historico-admin', icon: '🕵️', label: 'Historial Completo' },
+      { view: 'view-historico-admin', icon: NAV_ICONS.adminHist, label: 'Historial Completo' },
     ]);
   }
   
   const ventasItems = [
-    { view: 'view-venta',  icon: '🛒', label: 'Nueva Venta' },
-    { view: 'view-historial', icon: '📋', label: 'Historial' },
+    { view: 'view-venta',    icon: NAV_ICONS.venta,     label: 'Nueva Venta' },
+    { view: 'view-historial',icon: NAV_ICONS.histList,  label: 'Historial' },
   ];
   if (!jefe) {
-    ventasItems.push({ view: 'view-gastos', icon: '💸', label: 'Caja y Retiros' });
-    ventasItems.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Mis Ganancias' });
-    ventasItems.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
+    ventasItems.push({ view: 'view-gastos',         icon: NAV_ICONS.cajaCierre, label: 'Caja y Retiros' });
+    ventasItems.push({ view: 'view-mis-ganancias',  icon: NAV_ICONS.ganancias,  label: 'Mis Ganancias' });
+    ventasItems.push({ view: 'view-stock',           icon: NAV_ICONS.stock,      label: 'Stock' });
   }
   html += navSection('Ventas', ventasItems);
   html += navSection('Deudores', [
-    { view: 'view-deudores', icon: '💳', label: 'Lista Deudores' },
+    { view: 'view-deudores', icon: NAV_ICONS.deudores, label: 'Lista Deudores' },
   ]);
 
   nav.innerHTML = html;
@@ -499,19 +521,28 @@ function navSection(label, items) {
 // ─── Mobile Navigation ────────────────────────────────────
 function getMobileNavItems() {
   const jefe = currentUser.role === 'jefe';
+  const MOBILE_ICONS = {
+    dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+    venta:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+    historial: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+    deudores:  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    stock:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    caja:      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+    ganancias: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  };
   const items = [];
   if (jefe) {
-    items.push({ view: 'view-dashboard', icon: '📊', label: 'Dashboard' });
+    items.push({ view: 'view-dashboard', icon: MOBILE_ICONS.dashboard, label: 'Dashboard' });
   }
-  items.push({ view: 'view-venta',    icon: '🛒', label: 'Venta' });
-  items.push({ view: 'view-historial',icon: '📋', label: 'Historial' });
-  items.push({ view: 'view-deudores', icon: '💳', label: 'Deudores' });
+  items.push({ view: 'view-venta',    icon: MOBILE_ICONS.venta,    label: 'Venta' });
+  items.push({ view: 'view-historial',icon: MOBILE_ICONS.historial, label: 'Historial' });
+  items.push({ view: 'view-deudores', icon: MOBILE_ICONS.deudores,  label: 'Deudores' });
   if (jefe) {
-    items.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
+    items.push({ view: 'view-stock', icon: MOBILE_ICONS.stock, label: 'Stock' });
   } else {
-    items.push({ view: 'view-gastos', icon: '💸', label: 'Caja' });
-    items.push({ view: 'view-mis-ganancias', icon: '💰', label: 'Ganancias' });
-    items.push({ view: 'view-stock', icon: '👗', label: 'Stock' });
+    items.push({ view: 'view-gastos',          icon: MOBILE_ICONS.caja,     label: 'Caja' });
+    items.push({ view: 'view-mis-ganancias',   icon: MOBILE_ICONS.ganancias, label: 'Ganancias' });
+    items.push({ view: 'view-stock',           icon: MOBILE_ICONS.stock,     label: 'Stock' });
   }
   return items;
 }
@@ -680,85 +711,152 @@ function buildDashboard() {
   });
   const maxAmt = Math.max(...last7.map(d=>d.amt), 1);
 
+  const DASH_ICONS = {
+    trending:  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+    inbox:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>',
+    cash:      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+    expense:   '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
+    cashBox:   '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>',
+    cart:      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>',
+    tag:       '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    alert:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    card:      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+  };
+
   return `
-  <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+  <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom: 28px;">
     <div>
-      <h2>📊 Dashboard</h2>
-      <p>Resumen del negocio – ${new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+      <h2 style="font-size:24px; font-weight:800; letter-spacing:-0.5px; margin-bottom:4px;">Dashboard</h2>
+      <p style="color:var(--text-2); font-size:13px;">${new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
     </div>
-    <div style="display:flex; gap: 10px; align-items: center; background: var(--bg2); padding: 10px; border-radius: 8px; border: 1px solid var(--border);">
-      <div style="display:flex; flex-direction: column; gap: 4px;">
-        <label style="font-size: 11px; color: var(--text-3);">Desde</label>
-        <input type="date" id="dash-start" class="form-control" style="padding: 4px 8px; font-size: 13px;" value="${dashStartDate}">
+    <div style="display:flex; gap:10px; align-items:center; background:var(--bg2); padding:10px 14px; border-radius:10px; border:1px solid var(--border);">
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-3);">Desde</label>
+        <input type="date" id="dash-start" style="padding:4px 8px; font-size:13px; background:transparent; border:none; outline:none; color:var(--text);" value="${dashStartDate}">
       </div>
-      <div style="display:flex; flex-direction: column; gap: 4px;">
-        <label style="font-size: 11px; color: var(--text-3);">Hasta</label>
-        <input type="date" id="dash-end" class="form-control" style="padding: 4px 8px; font-size: 13px;" value="${dashEndDate}">
-      </div>
-    </div>
-  </div>
-
-  <div class="stats-grid" style="margin-bottom: 16px;">
-    <div class="stat-card" style="border-left: 4px solid var(--purple); cursor: pointer; transition: all 0.2s;" id="card-total-vendido">
-      <div class="stat-icon">📈</div>
-      <div class="stat-label" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>Total Vendido (Período)</span>
-        <span style="font-size: 11px; color: var(--text-3); background: var(--bg3); padding: 2px 6px; border-radius: 4px;">Ver Desglose ▾</span>
-      </div>
-      <div class="stat-value text-purple" style="font-size:26px;">${fmt(totalVendido)}</div>
-      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">${intervalSales.length} ventas en el período</div>
-    </div>
-  </div>
-
-  <div id="dash-breakdown" style="display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 16px; animation: fadeIn 0.2s ease;">
-    <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 14px; color: var(--text-2);">Desglose del período</h4>
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
-        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">💵 Efectivo</div>
-        <div style="font-size: 18px; font-weight: 600; color: var(--green);">${fmt(ventasEfectivoInt)}</div>
-      </div>
-      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
-        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">🏦 Transferencia</div>
-        <div style="font-size: 18px; font-weight: 600; color: var(--accent);">${fmt(ventasTransfInt)}</div>
-      </div>
-      <div style="flex: 1; min-width: 120px; background: var(--bg3); padding: 12px; border-radius: 8px;">
-        <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">💳 Deudores</div>
-        <div style="font-size: 18px; font-weight: 600; color: var(--red);">${fmt(ventasDeudorInt)}</div>
+      <div style="width:1px; height:30px; background:var(--border); margin:0 2px;"></div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <label style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-3);">Hasta</label>
+        <input type="date" id="dash-end" style="padding:4px 8px; font-size:13px; background:transparent; border:none; outline:none; color:var(--text);" value="${dashEndDate}">
       </div>
     </div>
   </div>
 
-  <div class="stats-grid">
-    <div class="stat-card" style="border-left: 4px solid var(--accent);"><div class="stat-icon">📥</div><div class="stat-label">Caja Inicial Hoy</div><div class="stat-value text-accent">${fmt(openingCash)}</div></div>
-    <div class="stat-card" style="border-left: 4px solid var(--green);"><div class="stat-icon">💵</div><div class="stat-label">Ventas Efectivo Hoy</div><div class="stat-value text-green">${fmt(cashSalesToday)}</div></div>
-    <div class="stat-card" style="border-left: 4px solid var(--red);"><div class="stat-icon">💸</div><div class="stat-label">Gastos/Caja Hoy</div><div class="stat-value text-red">-${fmt(expensesToday)}</div></div>
-    <div class="stat-card" style="border-left: 4px solid var(--purple);"><div class="stat-icon">💰</div><div class="stat-label">Caja Esperada (Efectivo)</div><div class="stat-value text-purple" style="font-size:26px;">${fmt(expectedCashInDrawer)}</div></div>
+  <!-- KPI Principal -->
+  <div style="background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:24px 28px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:20px; cursor:pointer; transition:border-color .2s;" id="card-total-vendido" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)'">
+    <div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="color:var(--accent);">${DASH_ICONS.trending}</span>
+        <span style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text-2);">Total Vendido — Período</span>
+      </div>
+      <div style="font-size:36px; font-weight:900; letter-spacing:-1px; color:var(--text);">${fmt(totalVendido)}</div>
+      <div style="font-size:12px; color:var(--text-3); margin-top:6px;">${intervalSales.length} operaciones registradas</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px; color:var(--text-3); background:var(--bg3); border:1px solid var(--border); padding:4px 10px; border-radius:6px; display:inline-block;">Ver desglose ↓</div>
+    </div>
   </div>
 
-  <div class="stats-grid" style="margin-top: 16px;">
-    <div class="stat-card"><div class="stat-icon">🛒</div><div class="stat-label">Ventas Totales Hoy</div><div class="stat-value">${todaySales.length}</div></div>
-    <div class="stat-card"><div class="stat-icon">👗</div><div class="stat-label">Productos</div><div class="stat-value">${products.length}</div></div>
-    <div class="stat-card"><div class="stat-icon">⚠️</div><div class="stat-label">Stock bajo</div><div class="stat-value text-yellow">${lowStock.length}</div></div>
-    <div class="stat-card"><div class="stat-icon">💳</div><div class="stat-label">Deuda total</div><div class="stat-value text-red">${fmt(totalDebt)}</div></div>
+  <!-- Desglose colapsable -->
+  <div id="dash-breakdown" style="display:none; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; animation:fadeIn .2s ease;">
+    <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--text-3); margin-bottom:14px;">Desglose del período</div>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:120px; background:var(--bg3); border:1px solid var(--border); padding:14px 16px; border-radius:10px;">
+        <div style="font-size:11px; font-weight:600; color:var(--text-3); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/></svg>
+          Efectivo
+        </div>
+        <div style="font-size:20px; font-weight:800; color:var(--green);">${fmt(ventasEfectivoInt)}</div>
+      </div>
+      <div style="flex:1; min-width:120px; background:var(--bg3); border:1px solid var(--border); padding:14px 16px; border-radius:10px;">
+        <div style="font-size:11px; font-weight:600; color:var(--text-3); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='1' y='4' width='22' height='16' rx='2'/><line x1='1' y1='10' x2='23' y2='10'/></svg>
+          Transferencia
+        </div>
+        <div style="font-size:20px; font-weight:800; color:var(--accent);">${fmt(ventasTransfInt)}</div>
+      </div>
+      <div style="flex:1; min-width:120px; background:var(--bg3); border:1px solid var(--border); padding:14px 16px; border-radius:10px;">
+        <div style="font-size:11px; font-weight:600; color:var(--text-3); margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+          <svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/><circle cx='9' cy='7' r='4'/></svg>
+          Deudores
+        </div>
+        <div style="font-size:20px; font-weight:800; color:var(--red);">${fmt(ventasDeudorInt)}</div>
+      </div>
+    </div>
   </div>
 
-  <div class="section">
-    <div class="section-header"><span class="section-title">Ventas últimos 7 días</span></div>
-    <div class="card" style="padding:24px 20px">
-      <div style="display:flex;align-items:flex-end;gap:10px;height:120px">
+  <!-- Stats Caja -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:14px; margin-bottom:14px;">
+    <div style="background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--accent); margin-bottom:10px;">${DASH_ICONS.inbox}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Caja Inicial</div>
+      <div style="font-size:22px; font-weight:800; color:var(--text);">${fmt(openingCash)}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--green); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--green); margin-bottom:10px;">${DASH_ICONS.cash}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Efectivo Hoy</div>
+      <div style="font-size:22px; font-weight:800; color:var(--green);">${fmt(cashSalesToday)}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--red); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--red); margin-bottom:10px;">${DASH_ICONS.expense}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Gastos Hoy</div>
+      <div style="font-size:22px; font-weight:800; color:var(--red);">-${fmt(expensesToday)}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--purple); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--purple); margin-bottom:10px;">${DASH_ICONS.cashBox}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Caja Esperada</div>
+      <div style="font-size:26px; font-weight:900; color:var(--text);">${fmt(expectedCashInDrawer)}</div>
+    </div>
+  </div>
+
+  <!-- Stats Operaciones -->
+  <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(170px,1fr)); gap:14px; margin-bottom:28px;">
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--text-3); margin-bottom:10px;">${DASH_ICONS.cart}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Ventas Hoy</div>
+      <div style="font-size:28px; font-weight:900;">${todaySales.length}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--text-3); margin-bottom:10px;">${DASH_ICONS.tag}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Productos</div>
+      <div style="font-size:28px; font-weight:900;">${products.length}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--yellow); margin-bottom:10px;">${DASH_ICONS.alert}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Stock Bajo</div>
+      <div style="font-size:28px; font-weight:900; color:${lowStock.length ? 'var(--yellow)' : 'var(--text)'}">${lowStock.length}</div>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:18px 20px;">
+      <div style="color:var(--red); margin-bottom:10px;">${DASH_ICONS.card}</div>
+      <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-2); margin-bottom:6px;">Deuda Total</div>
+      <div style="font-size:22px; font-weight:800; color:var(--red);">${fmt(totalDebt)}</div>
+    </div>
+  </div>
+
+  <!-- Gráfico 7 días -->
+  <div style="margin-bottom:28px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <span style="font-size:14px; font-weight:700; letter-spacing:-0.3px;">Ventas — Últimos 7 días</span>
+      <span style="font-size:11px; color:var(--text-3); background:var(--bg2); border:1px solid var(--border); padding:3px 10px; border-radius:6px;">Diario</span>
+    </div>
+    <div style="background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:24px 20px;">
+      <div style="display:flex; align-items:flex-end; gap:8px; height:110px;">
         ${last7.map(d=>`
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
-            <div style="font-size:10px;color:var(--text-3)">${fmt(d.amt)}</div>
-            <div style="width:100%;background:var(--accent-g);border-radius:4px 4px 0 0;height:${Math.round((d.amt/maxAmt)*90)||4}px;opacity:.85;transition:height .4s ease"></div>
-            <div style="font-size:11px;color:var(--text-2)">${d.label}</div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+            <div style="font-size:10px; color:var(--text-3); white-space:nowrap;">${d.amt > 0 ? fmt(d.amt) : ''}</div>
+            <div style="width:100%; background:${d.amt > 0 ? 'var(--accent-g)' : 'var(--bg4)'}; border-radius:5px 5px 0 0; height:${Math.round((d.amt/maxAmt)*95)||3}px; opacity:${d.amt > 0 ? '.9' : '.4'}; transition:height .4s ease;"></div>
+            <div style="font-size:11px; color:var(--text-2); text-transform:capitalize;">${d.label}</div>
           </div>`).join('')}
       </div>
     </div>
   </div>
 
   ${lowStock.length ? `
-  <div class="section">
-    <div class="section-header"><span class="section-title">⚠️ Stock bajo</span></div>
+  <div style="margin-bottom:28px;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+      <span style="color:var(--yellow);">${DASH_ICONS.alert}</span>
+      <span style="font-size:14px; font-weight:700;">Stock bajo — requiere atención</span>
+    </div>
     <div class="table-wrap">
       <table><thead><tr><th>Producto</th><th>Categoría</th><th>Talle</th><th>Stock</th></tr></thead><tbody>
         ${lowStock.map(p=>{
@@ -848,7 +946,10 @@ function buildMisGanancias() {
         <span style="color:var(--text-3)">-</span>
         <input type="date" id="mg-filter-to" value="${toD}" style="width:130px; font-size:12px; padding:4px; border:none; outline:none; background:transparent; color:var(--text);" />
       </div>
-      <button class="btn btn-secondary" onclick="openHorasEmpleado('${u.id}')">🕐 Editar mis horas</button>
+    <button class="btn btn-secondary" onclick="openHorasEmpleado('${u.id}')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Editar mis horas
+      </button>
     </div>
   </div>
   
@@ -944,9 +1045,18 @@ function buildEmpleados() {
       <td>${fmt(commissionAmt)} <span style="font-size:10px;color:var(--accent)">(${commissionPct}%)</span></td>
       <td class="text-green" style="font-weight:700;">${fmt(totalToPay)}</td>
       <td>
-        <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')">✏️ Editar</button>
-        <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')">🕐 Horas</button>
-        <button class="btn btn-primary btn-sm" onclick="openEmployeeSales('${u.id}', '${fromD}', '${toD}')">🛍️ Ventas</button>
+        <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')" title="Editar">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')" title="Horas">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Horas
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="openEmployeeSales('${u.id}', '${fromD}', '${toD}')" title="Ver ventas">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          Ventas
+        </button>
       </td>
     </tr>`;
   }).join('');
@@ -962,7 +1072,10 @@ function buildEmpleados() {
         <span style="color:var(--text-3)">-</span>
         <input type="date" id="emp-filter-to" value="${toD}" style="width:130px; font-size:12px; padding:4px; border:none; outline:none; background:transparent; color:var(--text);" />
       </div>
-      <button class="btn btn-primary" onclick="openNuevoEmpleado()">➕ Nuevo empleado</button>
+      <button class="btn btn-primary" onclick="openNuevoEmpleado()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nuevo empleado
+      </button>
     </div>
   </div>
   <div class="table-wrap">
