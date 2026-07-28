@@ -11,6 +11,10 @@ const DB = {
   currentTenant: '5inco.com',
   KEYS: {},
 
+  init() {
+    this.buildKeys(); // Initialize KEYS with default tenant on startup
+  },
+
   setTenant(email) {
     if (!email || !email.includes('@')) return;
     this.currentTenant = email.split('@')[1].toLowerCase();

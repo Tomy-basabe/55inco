@@ -8,6 +8,7 @@ const APP_VERSION = '1.4.0';
 // Supabase y seed se inicializan asíncronamente al final en startApp()
 
 let currentUser = null;
+DB.init(); // Initialize KEYS immediately so getUsers() works before login
 let cart = [];        // [{ product, qty, discount }]
 let salePayType = 'efectivo';
 let saleDebtorId = null;
