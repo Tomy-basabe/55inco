@@ -3907,33 +3907,49 @@ function bindHistoricoAdmin() {
 
 // ─── Auto-login check & Supabase Startup ──────────────────
 async function startApp() {
-  // Inicializar Supabase y sincronizar la caché local
-  await DB.initSupabase();
-  DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
+  const users = DB.getUsers();
   
-  renderNetflixProfiles();
-  const session = DB.getSession();
-  if (session && session.id) {
-    // Verificar si el usuario aún existe
-    const user = DB.getUsers().find(u=>u.id===session.id);
-    if (user) {
-      currentUser = user;
-      
-      // Auto-registrar horas del cajero si inicia jornada hoy
-      if (currentUser.role === 'cajero') {
-        const dateStr = today();
-        const hoursData = DB.getHours();
-        if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
-          const defaultHours = currentUser.defaultHours || 3.5;
-          DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-          toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+  const bootUI = () => {
+    DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
+    renderNetflixProfiles();
+    const session = DB.getSession();
+    if (session && session.id) {
+      const user = DB.getUsers().find(u=>u.id===session.id);
+      if (user) {
+        currentUser = user;
+        
+        if (currentUser.role === 'cajero') {
+          const dateStr = today();
+          const hoursData = DB.getHours();
+          if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
+            const defaultHours = currentUser.defaultHours || 3.5;
+            DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+            toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+          }
         }
+        initApp();
+        return;
       }
-      
-      initApp();
-      return;
     }
+    showPage('page-login');
+  };
+
+  if (users.length === 0) {
+    // Si no hay caché local, esperamos a Supabase (primera vez)
+    await DB.initSupabase();
+    bootUI();
+  } else {
+    // Carga instantánea desde caché
+    bootUI();
+    // Sincronización silenciosa en background
+    DB.initSupabase().then(() => {
+      if (currentUser) {
+        const currentView = document.querySelector('.view-section.active')?.id;
+        if (currentView) renderView(currentView);
+      } else {
+        renderNetflixProfiles();
+      }
+    });
   }
-  showPage('page-login');
 }
 startApp();
