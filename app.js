@@ -31,6 +31,12 @@ function initials(name) {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
 }
 function el(id) { return document.getElementById(id); }
+function escapeHTML(str) {
+  if (str == null) return '';
+  return String(str).replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[tag] || tag));
+}
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   el(id).classList.add('active');
@@ -205,7 +211,7 @@ function renderNetflixProfiles() {
   container.innerHTML = users.map(u => `
     <div class="netflix-profile" onclick="selectNetflixProfile('${u.id}')">
       <div class="netflix-avatar">${initials(u.name)}</div>
-      <div class="netflix-profile-name">${u.name}</div>
+      <div class="netflix-profile-name">${escapeHTML(u.name)}</div>
     </div>
   `).join('');
 }
@@ -370,7 +376,7 @@ el('btn-change-pin-init').addEventListener('click', () => {
     <div class="form-group">
       <label>Seleccionar Usuario</label>
       <select id="pin-change-user">
-        ${users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('')}
+        ${users.map(u=>`<option value="${u.id}">${escapeHTML(u.name)}</option>`).join('')}
       </select>
     </div>
     <div class="form-group">
@@ -845,7 +851,7 @@ function buildDashboard() {
           <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
             <div style="font-size:10px; color:var(--text-3); white-space:nowrap;">${d.amt > 0 ? fmt(d.amt) : ''}</div>
             <div style="width:100%; background:${d.amt > 0 ? 'var(--accent-g)' : 'var(--bg4)'}; border-radius:5px 5px 0 0; height:${Math.round((d.amt/maxAmt)*95)||3}px; opacity:${d.amt > 0 ? '.9' : '.4'}; transition:height .4s ease;"></div>
-            <div style="font-size:11px; color:var(--text-2); text-transform:capitalize;">${d.label}</div>
+            <div style="font-size:11px; color:var(--text-2); text-transform:capitalize;">${escapeHTML(d.label)}</div>
           </div>`).join('')}
       </div>
     </div>
@@ -1038,7 +1044,7 @@ function buildEmpleados() {
 
     return `
     <tr>
-      <td><div class="flex-row"><div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(u.name)}</div>${u.name}</div></td>
+      <td><div class="flex-row"><div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(u.name)}</div>${escapeHTML(u.name)}</div></td>
       <td>${totalHours}h <span style="font-size:10px;color:var(--text-3)">(${fmt(u.salaryHour||0)}/h)</span></td>
       <td>${fmt(baseSalary)}</td>
       <td>${fmt(totalSalesAmount)}</td>
@@ -1098,7 +1104,7 @@ function openEmployeeSales(userId, fromD, toD) {
   });
 
   if (sales.length === 0) {
-    toast(`No hay ventas registradas para ${u.name} en este período.`, 'info');
+    toast(`No hay ventas registradas para ${escapeHTML(u.name)} en este período.`, 'info');
     return;
   }
 
@@ -1112,7 +1118,7 @@ function openEmployeeSales(userId, fromD, toD) {
     `;
   }).join('');
 
-  openModal(`🛍️ Ventas de ${u.name}`, `
+  openModal(`🛍️ Ventas de ${escapeHTML(u.name)}`, `
     <div style="font-size:13px; color:var(--text-2); margin-bottom:12px;">
       Mostrando <strong>${sales.length}</strong> ventas del período seleccionado.
     </div>
@@ -1159,7 +1165,7 @@ function saveNuevoEmpleado() {
   const users = DB.getUsers();
   if (users.find(u=>u.username===username)) { toast('Ya existe ese usuario.','error'); return; }
   const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours, commissionPct };
-  users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${name}"`);
+  users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${escapeHTML(name)}"`);
   closeModal(); toast('Empleado creado.','success');
   renderView('view-empleados');
 }
@@ -1167,8 +1173,8 @@ function saveNuevoEmpleado() {
 function openEmpleadoEdit(id) {
   const u = DB.getUsers().find(x=>x.id===id);
   if (!u) return;
-  openModal(`Editar – ${u.name}`, `
-    <div class="form-group"><label>Nombre</label><input id="ee-name" type="text" value="${u.name}"/></div>
+  openModal(`Editar – ${escapeHTML(u.name)}`, `
+    <div class="form-group"><label>Nombre</label><input id="ee-name" type="text" value="${escapeHTML(u.name)}"/></div>
     <div class="form-group"><label>Contraseña</label><input id="ee-pass" type="password" placeholder="Dejar vacío para no cambiar"/></div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Sueldo/hora ($)</label><input id="ee-salary" type="number" value="${u.salaryHour||0}"/></div>
@@ -1193,7 +1199,7 @@ function saveEmpleadoEdit(id) {
   if (!name) { toast('El nombre es requerido.','error'); return; }
   users[idx] = { ...users[idx], name, salaryHour, defaultHours, commissionPct };
   if (pass) users[idx].password = pass;
-  DB.saveUsersWithAudit(users, `Empleado editado: "${name}"`);
+  DB.saveUsersWithAudit(users, `Empleado editado: "${escapeHTML(name)}"`);
   closeModal(); toast('Empleado actualizado.','success');
   renderView('view-empleados');
 }
@@ -1245,7 +1251,7 @@ function renderHorasModal(userId, year, month) {
   const prevMonth = month===1 ? [year-1,12] : [year,month-1];
   const nextMonth = month===12? [year+1,1]  : [year,month+1];
 
-  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg> Horas – ${u.name}`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M12 6v6l4 2"/></svg> Horas – ${escapeHTML(u.name)}`, `
     <div class="flex-row mb-2">
       <button class="btn btn-ghost btn-sm" onclick="renderHorasModal('${userId}',${prevMonth[0]},${prevMonth[1]})">◀</button>
       <span style="flex:1;text-align:center;font-weight:700">${monthName}</span>
@@ -1316,7 +1322,7 @@ function buildCategorias() {
   const rows = cats.map(c => {
     const count = prods.filter(p=>p.categoryId===c.id).length;
     return `<tr>
-      <td><span class="badge badge-purple"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg></span> ${c.name}</td>
+      <td><span class="badge badge-purple"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg></span> ${escapeHTML(c.name)}</td>
       <td>${count} prenda(s)</td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="openEditCat('${c.id}','${c.name.replace(/'/g,"\\'")}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -1357,7 +1363,7 @@ function saveNewCat() {
 }
 function openEditCat(id, name) {
   openModal('Editar Categoría', `
-    <div class="form-group"><label>Nombre</label><input id="cat-edit-name" type="text" value="${name}"/></div>
+    <div class="form-group"><label>Nombre</label><input id="cat-edit-name" type="text" value="${escapeHTML(name)}"/></div>
   `, `
     <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteCat('${id}'); closeModal();"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Eliminar</button>
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
@@ -1408,7 +1414,7 @@ function buildStock() {
   const filterBar = `
     <div class="cat-filters" id="stock-cat-filters">
       <div class="cat-filter active" data-cat="all">Todas</div>
-      ${cats.map(c=>`<div class="cat-filter" data-cat="${c.id}">${c.name}</div>`).join('')}
+      ${cats.map(c=>`<div class="cat-filter" data-cat="${c.id}">${escapeHTML(c.name)}</div>`).join('')}
     </div>`;
 
   const rows = prods.map(p => {
@@ -1417,14 +1423,14 @@ function buildStock() {
     const hasMulti = p.variants && p.variants.length > 1;
     const variantRows = hasMulti ? vars.map(v => `
       <div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px;">
-        <span style="color:var(--text-2);">${v.label}</span>
+        <span style="color:var(--text-2);">${escapeHTML(v.label)}</span>
         <span style="font-weight:600;">${fmt(v.price)}</span>
         <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">${v.stock}</span>
       </div>
     `).join('') : '';
     return `
     <tr data-cat="${p.categoryId}">
-      <td><strong>${p.name}</strong>${p.talle ? `<br><small style="color:var(--text-3)">Talle: ${p.talle}</small>` : ''}</td>
+      <td><strong>${escapeHTML(p.name)}</strong>${p.talle ? `<br><small style="color:var(--text-3)">Talle: ${p.talle}</small>` : ''}</td>
       <td>${catMap[p.categoryId]||'-'}</td>
       <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : fmt(vars[0].price)}</td>
       <td><span class="badge ${totalStock<=2?'badge-red':totalStock<=5?'badge-yellow':'badge-green'}">${hasMulti ? totalStock + ' total' : totalStock}</span></td>
@@ -1505,7 +1511,7 @@ function collectVariants(containerId) {
 
 function openNewProduct(prefillCatId) {
   const cats = sortByName(DB.getCategories());
-  const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===prefillCatId?'selected':''}>${c.name}</option>`).join('');
+  const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===prefillCatId?'selected':''}>${escapeHTML(c.name)}</option>`).join('');
   openModal('Nueva Prenda', `
     <div class="form-group"><label>Nombre</label><input id="np-name" type="text" placeholder="Ej: Remera Básica"/></div>
     <div class="form-row cols-2">
@@ -1550,7 +1556,7 @@ function openNewProduct(prefillCatId) {
         const cat = DB.addCategory(name.trim());
         const selEl = el('np-cat');
         if (selEl) {
-          selEl.innerHTML += `<option value="${cat.id}" selected>${cat.name}</option>`;
+          selEl.innerHTML += `<option value="${cat.id}" selected>${escapeHTML(cat.name)}</option>`;
           selEl.value = cat.id;
         }
         toast('Categoría creada.','success');
@@ -1577,11 +1583,11 @@ function openEditProduct(id) {
   const p = DB.getProducts().find(x=>x.id===id);
   if (!p) return;
   const cats = sortByName(DB.getCategories());
-  const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${c.name}</option>`).join('');
+  const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${escapeHTML(c.name)}</option>`).join('');
   const vars = getVariants(p);
   const variantRowsHtml = vars.map((v, i) => variantRowHtml(i, v.label, v.price, v.stock)).join('');
   openModal('Editar Prenda', `
-    <div class="form-group"><label>Nombre</label><input id="ep-name" type="text" value="${p.name}"/></div>
+    <div class="form-group"><label>Nombre</label><input id="ep-name" type="text" value="${escapeHTML(p.name)}"/></div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Categoría</label>
         <select id="ep-cat">${catOpts}</select>
@@ -1635,15 +1641,18 @@ function buildVenta() {
   const cats = DB.getCategories();
   const prods = DB.getProducts();
 
+  const hasOrphans = prods.some(p => !cats.find(c=>c.id===p.categoryId));
+
   const catFilters = `
     <div class="cat-filters" id="v-cat-filters">
       <div class="cat-filter active" data-cat="all">Todas</div>
       ${cats.map(c=>`
         <div class="cat-filter" data-cat="${c.id}" style="display: inline-flex; align-items: center; gap: 6px;">
-          <span>${c.name}</span>
-          <span class="delete-cat-pill" onclick="event.stopPropagation(); deleteCatFromVenta('${c.id}', '${c.name.replace(/'/g, "\\'")}')" style="font-weight: 800; opacity: 0.5; cursor: pointer; padding: 2px; font-size: 11px; margin-left: 2px; transition: color 0.2s;" title="Eliminar categoría">×</span>
+          <span>${escapeHTML(c.name)}</span>
+          <span class="delete-cat-pill" onclick="event.stopPropagation(); deleteCatFromVenta('${c.id}', '${escapeHTML(c.name).replace(/'/g, "\\'")}')" style="font-weight: 800; opacity: 0.5; cursor: pointer; padding: 2px; font-size: 11px; margin-left: 2px; transition: color 0.2s;" title="Eliminar categoría">×</span>
         </div>
       `).join('')}
+      ${hasOrphans ? `<div class="cat-filter" data-cat="none" style="display: inline-flex; align-items: center; gap: 6px;"><span>Sin categoría</span></div>` : ''}
     </div>`;
 
   const productCards = prods.map(p => {
@@ -1652,10 +1661,10 @@ function buildVenta() {
     const totalStock = getTotalStock(p);
     const priceDisplay = hasMulti ? getPriceRange(p) : fmt(getVariants(p)[0].price);
     return `
-    <div class="product-card" data-id="${p.id}" data-cat="${p.categoryId}" onclick="addToCart('${p.id}')">
+    <div class="product-card" data-id="${p.id}" data-cat="${cat ? p.categoryId : 'none'}" onclick="addToCart('${p.id}')">
       <button class="btn btn-ghost btn-sm btn-icon" onclick="event.stopPropagation(); openEditProductFromVenta('${p.id}')" style="position: absolute; top: 8px; right: 8px; font-size: 11px; z-index: 10; opacity: 0.7;" title="Editar Prenda"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
       <div class="product-cat">${cat?.name||'Sin categoría'}</div>
-      <div class="product-name" style="padding-right: 20px;">${p.name}</div>
+      <div class="product-name" style="padding-right: 20px;">${escapeHTML(p.name)}</div>
       ${p.talle ? `<div class="product-talle">Talle: ${p.talle}</div>` : ''}
       <div class="product-price">${priceDisplay}</div>
       <div class="product-stock">Stock: ${totalStock}${hasMulti ? ` <span style="font-size:10px;color:var(--accent);">(${p.variants.length} precios)</span>` : ''}</div>
@@ -1730,7 +1739,7 @@ function buildVenta() {
                 <label>Seleccionar Deudor (si carga en deudor)</label>
                 <select id="v-debtor-select">
                   <option value="">Elegir deudor...</option>
-                  ${sortByName(DB.getDebtors()).map(d=>`<option value="${d.id}">${d.name} (+${d.surcharge}%)</option>`).join('')}
+                  ${sortByName(DB.getDebtors()).map(d=>`<option value="${d.id}">${escapeHTML(d.name)} (+${d.surcharge}%)</option>`).join('')}
                   <option value="__new__">+ Crear nuevo deudor</option>
                 </select>
               </div>
@@ -1814,9 +1823,9 @@ function bindVenta() {
 }
 
 function deleteCatFromVenta(id, name) {
-  if (!confirm(`¿Estás seguro de que querés eliminar la categoría "${name}"? Las prendas de esta categoría no se eliminarán.`)) return;
+  if (!confirm(`¿Estás seguro de que querés eliminar la categoría "${escapeHTML(name)}"? Las prendas de esta categoría no se eliminarán.`)) return;
   DB.deleteCategory(id);
-  toast(`Categoría "${name}" eliminada.`, 'success');
+  toast(`Categoría "${escapeHTML(name)}" eliminada.`, 'success');
   renderView('view-venta');
 }
 
@@ -1869,7 +1878,7 @@ function addToCart(productId, variantIdx) {
   renderCartItems();
   const card = document.querySelector(`.product-card[data-id="${productId}"]`);
   if (card) { card.classList.add('selected'); setTimeout(()=>card.classList.remove('selected'),600); }
-  toast(`${p.name}${variantLabel ? ' ('+variantLabel+')' : ''} agregado al carrito.`, 'success');
+  toast(`${escapeHTML(p.name)}${variantLabel ? ' ('+variantLabel+')' : ''} agregado al carrito.`, 'success');
 }
 
 function openVariantPicker(p) {
@@ -1877,14 +1886,14 @@ function openVariantPicker(p) {
   const sorted = p.variants.map((v, i) => ({ ...v, origIdx: i })).sort((a, b) => b.price - a.price);
   const btns = sorted.map(v => `
     <button class="btn btn-secondary" style="display:flex;justify-content:space-between;width:100%;padding:12px 16px;margin-bottom:6px;" onclick="closeModal(); addToCart('${p.id}', ${v.origIdx})">
-      <span style="font-weight:700;">${v.label}</span>
+      <span style="font-weight:700;">${escapeHTML(v.label)}</span>
       <span style="display:flex;gap:12px;align-items:center;">
         <span style="font-weight:800;color:var(--accent);">${fmt(v.price)}</span>
         <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">Stock: ${v.stock}</span>
       </span>
     </button>
   `).join('');
-  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> ${p.name} – Elegí el precio`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> ${escapeHTML(p.name)} – Elegí el precio`, `
     <p class="text-muted" style="font-size:13px;margin-bottom:12px;">Este producto tiene varios precios. Seleccioná cuál agregar al carrito:</p>
     ${btns}
   `, '');
@@ -1919,7 +1928,7 @@ function renderCartItems() {
     return `
     <div class="cart-item">
       <div style="flex:1">
-        <div class="cart-item-name">${p.name}</div>
+        <div class="cart-item-name">${escapeHTML(p.name)}</div>
         <div style="font-size:11px;color:var(--text-3)">${c.variantLabel ? `<span class="badge badge-purple" style="font-size:10px;">${c.variantLabel}</span> ` : ''}${p.talle||''}</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
           <button class="btn btn-ghost btn-sm btn-icon" onclick="changeQty('${ck}',-1)">−</button>
@@ -2026,9 +2035,13 @@ function validateSplitAmounts() {
   const disc = parseFloat(el('cart-discount')?.value||0);
   let baseTarget = sub - (sub * (disc/100));
 
-  const cash = parseFloat(el('v-split-cash')?.value)||0;
-  const card = parseFloat(el('v-split-card')?.value)||0;
-  const debt = parseFloat(el('v-split-debt')?.value)||0;
+  let cash = parseFloat(el('v-split-cash')?.value)||0;
+  let card = parseFloat(el('v-split-card')?.value)||0;
+  let debt = parseFloat(el('v-split-debt')?.value)||0;
+
+  if (cash < 0) { cash = 0; if(el('v-split-cash')) el('v-split-cash').value = 0; }
+  if (card < 0) { card = 0; if(el('v-split-card')) el('v-split-card').value = 0; }
+  if (debt < 0) { debt = 0; if(el('v-split-debt')) el('v-split-debt').value = 0; }
 
   // Optional card surcharge
   const applyCardSurcharge = el('v-card-surcharge-apply')?.checked;
@@ -2100,7 +2113,7 @@ function saveDebtorFromVenta() {
   const sel = window._ventaDebtorSelect || el('v-debtor-select');
   if (sel) {
     const opt = document.createElement('option');
-    opt.value = d.id; opt.textContent = `${d.name} (+${d.surcharge}%)`;
+    opt.value = d.id; opt.textContent = `${escapeHTML(d.name)} (+${d.surcharge}%)`;
     sel.insertBefore(opt, sel.lastElementChild);
     sel.value = d.id;
     saleDebtorId = d.id;
@@ -2110,7 +2123,7 @@ function saveDebtorFromVenta() {
 
 function openNewProductFromVenta() {
   const cats = sortByName(DB.getCategories());
-  const catOpts = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  const catOpts = cats.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
 
   openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Crear producto rápido', `
     <p class="text-muted" style="font-size:13px; margin-bottom:14px;">Creá el producto y se agregará automáticamente al carrito.</p>
@@ -2187,7 +2200,7 @@ function saveQuickProductFromVenta() {
   const newProd = DB.addProduct({ name, categoryId, talle: '', price, stock: 1 });
 
   closeModal();
-  toast(`"${name}" creado y agregado al carrito.`, 'success');
+  toast(`"${escapeHTML(name)}" creado y agregado al carrito.`, 'success');
 
   // Re-render view-venta to include the new product in the grid
   renderView('view-venta');
@@ -2224,11 +2237,21 @@ function saveVentaCat() {
 }
 
 function confirmSale() {
+  const dateStr = new Date().toISOString().split('T')[0];
+  const todayReg = DB.getCashRegisters().find(r=>r.date === dateStr);
+  if (!todayReg && currentUser.role !== 'jefe') {
+    toast('Debés abrir la caja chica del día antes de poder registrar ventas.', 'error');
+    return;
+  }
   if (cart.length === 0) { toast('El carrito está vacío.','error'); return; }
   
-  const cashAmt = parseFloat(el('v-split-cash')?.value)||0;
-  const cardAmt = parseFloat(el('v-split-card')?.value)||0;
-  const debtAmt = parseFloat(el('v-split-debt')?.value)||0;
+  let cashAmt = parseFloat(el('v-split-cash')?.value)||0;
+  let cardAmt = parseFloat(el('v-split-card')?.value)||0;
+  let debtAmt = parseFloat(el('v-split-debt')?.value)||0;
+  
+  if (cashAmt < 0) cashAmt = 0;
+  if (cardAmt < 0) cardAmt = 0;
+  if (debtAmt < 0) debtAmt = 0;
   
   if (debtAmt > 0 && !saleDebtorId) {
     const dsel = el('v-debtor-select');
@@ -2301,7 +2324,7 @@ function confirmSale() {
     <div style="font-size:12px;color:var(--text-2);text-align:right;">
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: ${fmt(cashAmt)}<br/>
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: ${fmt(finalCardAmtWithSurcharge)} ${applyCardSurcharge ? `(con recargo ${cardSurchargePct}%)` : ''}<br/>
-      ${debtAmt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor (${debtorName}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
+      ${debtAmt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor (${escapeHTML(debtorName)}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
     </div>`;
 
   let directCashHtml = '';
@@ -2440,7 +2463,7 @@ function buildHistorial() {
           ${isAbono ? '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 1v22 M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Abono a Deuda' : '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deuda Agregada'}${detailStr}
         </td>
         <td>-</td>
-        <td><span class="badge ${isAbono ? 'badge-purple' : 'badge-yellow'}">Manual</span> <small class="text-muted">${debtorName}</small></td>
+        <td><span class="badge ${isAbono ? 'badge-purple' : 'badge-yellow'}">Manual</span> <small class="text-muted">${escapeHTML(debtorName)}</small></td>
         <td>-</td>
         <td class="${isAbono ? 'text-green' : 'text-red'}" style="font-weight:700">${fmt(Math.abs(d.amount))}</td>
         <td>—</td>
@@ -2693,9 +2716,9 @@ function openExchangeModal(saleId) {
       if (p.variants && p.variants.length > 1) {
         return p.variants
           .filter(v => v.stock > 0)
-          .map((v, vi) => `<option value="${p.id}__v${vi}" data-price="${v.price}">${p.name} – ${v.label} (${fmt(v.price)}) [Stock: ${v.stock}]</option>`);
+          .map((v, vi) => `<option value="${p.id}__v${vi}" data-price="${v.price}">${escapeHTML(p.name)} – ${escapeHTML(v.label)} (${fmt(v.price)}) [Stock: ${v.stock}]</option>`);
       }
-      return [`<option value="${p.id}" data-price="${variants[0].price}">${p.name}${p.talle ? ' Talle '+p.talle : ''} (${fmt(variants[0].price)}) [Stock: ${variants[0].stock}]</option>`];
+      return [`<option value="${p.id}" data-price="${variants[0].price}">${escapeHTML(p.name)}${p.talle ? ' Talle '+p.talle : ''} (${fmt(variants[0].price)}) [Stock: ${variants[0].stock}]</option>`];
     }).join('');
 
   openModal('<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5"/></svg> Cambio de Prenda', `
@@ -3034,7 +3057,7 @@ function buildDeudores() {
     <div class="debtor-card" data-name="${d.name.toLowerCase()}" data-balance="${d.balance}" data-pending="${d.pendingCount}">
       <div class="debtor-avatar">${initials(d.name)}</div>
       <div class="debtor-info">
-        <div class="debtor-name">${d.name}</div>
+        <div class="debtor-name">${escapeHTML(d.name)}</div>
         <div class="debtor-phone">${d.phone||'Sin teléfono'} · Recargo: ${d.surcharge}%</div>
         <div style="font-size:12px;color:var(--text-3);margin-top:2px">
           ${d.pendingCount} deuda(s) pendiente(s)
@@ -3045,8 +3068,9 @@ function buildDeudores() {
         <div class="debtor-debt" style="color:${balanceColor}">${balanceStr}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
           <button class="btn btn-secondary btn-sm" onclick="openDebtorDetail('${d.id}')">Ver</button>
-          <button class="btn btn-ghost btn-sm" onclick="openEditDebtor('${d.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-          <button class="btn btn-danger btn-sm" onclick="deleteDebtorConfirm('${d.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+          <button class="btn btn-primary btn-sm" onclick="openEditDebtor('${d.id}')" title="Abonar / Sumar Deuda"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Abonar</button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditDebtor('${d.id}')" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="btn btn-danger btn-sm" onclick="deleteDebtorConfirm('${d.id}')" title="Eliminar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><path d="M3 6h18 M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6 M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
         </div>
       </div>
     </div>`;
@@ -3202,7 +3226,7 @@ function openDebtorDetail(id) {
     </div>`;
   }).join('');
 
-  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> ${debtor.name}`, `
+  openModal(`<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> ${escapeHTML(debtor.name)}`, `
     <div class="flex-row mb-2">
       <div>
         <div style="font-size:13px;color:var(--text-2)">${debtor.phone||'Sin teléfono'}</div>
@@ -3307,7 +3331,7 @@ function openEditDebtor(id) {
   const d = DB.getDebtors().find(x=>x.id===id);
   if (!d) return;
   openModal('Editar Deudor', `
-    <div class="form-group"><label>Nombre</label><input id="ed-name" type="text" value="${d.name}"/></div>
+    <div class="form-group"><label>Nombre</label><input id="ed-name" type="text" value="${escapeHTML(d.name)}"/></div>
     <div class="form-group"><label>Teléfono</label><input id="ed-phone" type="text" value="${d.phone||''}"/></div>
     <div class="form-group"><label>Recargo (%)</label><input id="ed-sur" type="number" value="${d.surcharge}"/></div>
     <div class="divider"></div>
@@ -3334,12 +3358,12 @@ function saveEditDebtor(id) {
   
   if (newDebt > 0) {
     DB.addDebt({ debtorId: id, amount: newDebt, detail });
-    DB.addAuditLog('debtor_update', `Suma de deuda manual: ${name} - $${newDebt}`, { debtorId: id, amount: newDebt, detail });
+    DB.addAuditLog('debtor_update', `Suma de deuda manual: ${escapeHTML(name)} - $${newDebt}`, { debtorId: id, amount: newDebt, detail });
   }
   if (payDebtAmt > 0) {
     // Add negative debt to represent a payment/abono
     DB.addDebt({ debtorId: id, amount: -Math.abs(payDebtAmt), detail });
-    DB.addAuditLog('debtor_update', `Abono de deuda manual: ${name} - $${payDebtAmt}`, { debtorId: id, amount: payDebtAmt, detail });
+    DB.addAuditLog('debtor_update', `Abono de deuda manual: ${escapeHTML(name)} - $${payDebtAmt}`, { debtorId: id, amount: payDebtAmt, detail });
   }
   
   closeModal(); toast('Deudor actualizado.','success');
@@ -3348,7 +3372,7 @@ function saveEditDebtor(id) {
 function deleteDebtorConfirm(id) {
   const d = DB.getDebtors().find(x=>x.id===id);
   if (!d) return;
-  if (!confirm(`¿Eliminar a ${d.name}? Esto eliminará su registro pero no sus deudas históricas.`)) return;
+  if (!confirm(`¿Eliminar a ${escapeHTML(d.name)}? Esto eliminará su registro pero no sus deudas históricas.`)) return;
   DB.deleteDebtor(id);
   toast('Deudor eliminado.','success');
   renderView('view-deudores');
@@ -3407,7 +3431,7 @@ function buildGastos() {
           ${e.type==='fijo'?'Fijo/Servicio':e.type==='caja'?'Retiro Caja':'Gasto Directo'}
         </span>
       </td>
-      <td><strong>${e.name}</strong></td>
+      <td><strong>${escapeHTML(e.name)}</strong></td>
       <td>${e.cashier ? `<small class="text-muted">${e.cashier}</small>` : 'Jefe'}</td>
       <td class="text-red" style="font-weight:700">-${fmt(e.amount)}</td>
       <td>
@@ -3751,7 +3775,7 @@ function finalizePayFixed(name) {
   });
 
   closeModal();
-  toast(`Pago de ${name} registrado con éxito.`, 'success');
+  toast(`Pago de ${escapeHTML(name)} registrado con éxito.`, 'success');
   renderView('view-gastos');
 }
 
@@ -3802,7 +3826,7 @@ function buildHistoricoAdmin() {
   const users = DB.getUsers();
   const actionTypes = Object.keys(AUDIT_LABELS);
 
-  const userOptions = users.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
+  const userOptions = users.map(u => `<option value="${escapeHTML(u.name)}">${escapeHTML(u.name)}</option>`).join('');
   const typeOptions = actionTypes.map(t => `<option value="${t}">${AUDIT_LABELS[t].icon} ${AUDIT_LABELS[t].label}</option>`).join('');
 
   return `
@@ -3873,7 +3897,7 @@ function renderAuditRows(logs) {
       <td style="white-space:nowrap;font-size:12px;">${fmtDate(log.date)}</td>
       <td><span style="font-weight:600;">${log.userName || '-'}</span></td>
       <td><span class="badge badge-purple" style="font-size:11px;">${meta.icon} ${meta.label}</span></td>
-      <td style="font-size:13px;">${log.description}</td>
+      <td style="font-size:13px;">${escapeHTML(log.description)}</td>
     </tr>`;
   }).join('');
 }
