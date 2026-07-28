@@ -100,7 +100,7 @@ const DB = {
         await this.supabase.from('users').insert([adminUser]);
       }
 
-      this.set('users', users.map(u => ({
+      this.set(this.KEYS.users, users.map(u => ({
         id: u.id,
         name: u.name,
         username: u.username,
