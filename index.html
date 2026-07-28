@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0d0f14" />
-  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="apple-touch-icon" href="logo.png" />
   <link rel="stylesheet" href="styles.css" />
   <script>
     (function() {
@@ -71,9 +71,11 @@
   <!-- Mobile Header -->
   <div class="mobile-header" id="mobile-header">
     <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Abrir menú">☰</button>
-    <div class="mobile-logo">
-      <div class="logo-icon sm">5</div>
-      <span>5inco</span>
+    <div class="mobile-logo" style="display: flex; align-items: center; gap: 8px;">
+      <img src="logo.png" alt="Logo" style="width: 24px; height: 24px; border-radius: 4px; object-fit: cover;" />
+      <span class="logo-text" style="font-size: 18px; letter-spacing: -0.5px; font-weight: bold;">
+        <span style="color: var(--text-muted)">Stack</span><span style="background-image: url('logo.png'); background-size: cover; background-position: center; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-weight: 900;">Hard</span>
+      </span>
     </div>
     <div class="mobile-user-name" id="mobile-user-name"></div>
   </div>
@@ -84,9 +86,13 @@
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <div class="logo-icon sm">5</div>
-        <span>5inco Store</span>
+      <div class="sidebar-logo" style="display: flex; flex-direction: column; align-items: flex-start; padding: 24px 16px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+          <img src="logo.png" alt="StackHard" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover;" />
+          <span class="logo-text" style="font-size: 20px; letter-spacing: -0.5px; font-weight: bold;">
+            <span style="color: var(--text-muted)">Stack</span><span style="background-image: url('logo.png'); background-size: cover; background-position: center; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-weight: 900;">Hard</span>
+          </span>
+        </div>
       </div>
     </div>
 
