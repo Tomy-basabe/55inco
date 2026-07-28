@@ -83,7 +83,7 @@ function makeSearchableSelect(selectId, onChangeCb) {
     const searchInput = document.createElement('input');
     searchInput.type = 'text';
     searchInput.className = 'ss-search';
-    searchInput.placeholder = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35"/></svg> Buscar...';
+    searchInput.placeholder = 'Buscar...';
     searchInput.autocomplete = 'off';
     searchInput.style.cssText = 'width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;cursor:pointer;box-sizing:border-box;';
 
@@ -1687,7 +1687,7 @@ function buildVenta() {
       <div class="cart-box">
         <div class="cart-header"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M20 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2z M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Carrito <span id="cart-count" class="badge badge-purple" style="margin-left:8px">0</span></div>
         <div class="cart-items" id="cart-items-list">
-          <div class="empty-state" style="padding:24px"><div class="empty-icon">🛍️</div><p>Agregá productos</p></div>
+          <div class="empty-state" style="padding:24px"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></div><p>Agregá productos</p></div>
         </div>
         <div class="cart-footer">
           <div class="form-group">
@@ -1905,7 +1905,7 @@ function renderCartItems() {
   const count = el('cart-count');
   if (!list) return;
   if (cart.length === 0) {
-    list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-icon">🛍️</div><p>Agregá productos</p></div>';
+    list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-3);"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg></div><p>Agregá productos</p></div>';
     if (count) count.textContent = '0';
     updateCartTotals();
     return;
@@ -2073,7 +2073,7 @@ function validateSplitAmounts() {
     } else {
       el('ct-total').style.color = 'var(--accent)';
       btn.disabled = false;
-      btn.textContent = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar Venta';
+      btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar Venta';
     }
   }
 }
