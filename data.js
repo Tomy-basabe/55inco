@@ -5,7 +5,7 @@
 const DB = {
   // ── Supabase Configuration ────────────
   SUPABASE_URL: 'https://oiyviypyaqocfnzcyjsn.supabase.co',
-  SUPABASE_KEY: 'sb_publishable_y07f9bN1fLQ8_jCY-cFvyQ_s7YPylH0',
+  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9peXZpeXB5YXFvY2ZuemN5anNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzMTc3NTgsImV4cCI6MjA5NTg5Mzc1OH0.39phAgso1qv1RTkouWg8_jS3Nof626lLk1Y7hnUZk3s',
   supabase: null,
   isSynced: false,
   currentTenant: '5inco.com',
@@ -68,6 +68,29 @@ const DB = {
   },
   id() { return this.currentTenant + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
 
+  // ── REST helpers (bypass SDK - the publishable key works with REST but not the JS SDK JWT format) ──
+  async _rest(method, table, body = null, query = '') {
+    const url = `${this.SUPABASE_URL}/rest/v1/${table}${query}`;
+    const opts = {
+      method,
+      headers: {
+        'apikey': this.SUPABASE_KEY,
+        'Authorization': `Bearer ${this.SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': method === 'POST' ? 'return=minimal' : 'return=representation'
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Supabase REST error ${res.status}: ${err}`);
+    }
+    if (method === 'PATCH' || method === 'DELETE') return null;
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  },
+
   // ── Supabase Init and Synchronization ──
   async initSupabase() {
     if (!this.SUPABASE_URL || !this.SUPABASE_KEY) {
@@ -75,22 +98,13 @@ const DB = {
       return false;
     }
     try {
-      if (typeof supabase === 'undefined') {
-        console.error('Supabase SDK no está cargado. Asegúrate de incluir el script CDN.');
-        return false;
-      }
-      this.supabase = supabase.createClient(this.SUPABASE_URL, this.SUPABASE_KEY);
+      this.supabase = true; // Mark as connected (using REST directly, not SDK)
       
       const overlay = document.getElementById('supabase-loading-overlay');
       if (overlay) overlay.style.display = 'flex';
 
       // Load ONLY users initially for login
-      const { data: users, error: errUsers } = await this.supabase.from('users').select('*');
-
-      if (errUsers) {
-        console.error('Error cargando usuarios de Supabase:', errUsers);
-        throw new Error('Error al consultar tabla users de Supabase');
-      }
+      const users = await this._rest('GET', 'users');
 
       if (!users || users.length === 0) {
         console.log('Base de datos vacía. Sembrando datos iniciales...');
@@ -99,24 +113,21 @@ const DB = {
         return true;
       }
 
-      // MIGRATION: update old usernames to new emails
-      let migrated = false;
+      // MIGRATION: update old usernames to new emails if needed
       for (const u of users) {
         if (!u.username.includes('@')) {
           const newEmail = u.username === 'andrea' ? 'andreatuta@5inco.com' : u.username + '@5inco.com';
-          const newPass = '123456';
           u.username = newEmail;
-          u.password = newPass;
-          await this.supabase.from('users').update({ username: newEmail, password: newPass }).eq('id', u.id);
-          migrated = true;
+          u.password = '123456';
+          await this._rest('PATCH', `users?id=eq.${u.id}`, { username: newEmail, password: '123456' });
         }
       }
       
-      // Check if stackhard master user exists
+      // Ensure stackhard master admin exists
       if (!users.find(u => u.username === 'stackhard@stackhard.com')) {
-        const adminUser = { id: 'master_admin_1', name: 'Admin', username: 'stackhard@stackhard.com', password: 'TOMAS2812', role: 'jefe', salary_hour: 0, default_hours: 0, commission_pct: 0 };
+        const adminUser = { id: 'master_admin_1', name: 'Tomas Admin', username: 'stackhard@stackhard.com', password: 'TOMAS2812', role: 'jefe', salary_hour: 0, default_hours: 0, commission_pct: 0 };
         users.push(adminUser);
-        await this.supabase.from('users').insert([adminUser]);
+        await this._rest('POST', 'users', [adminUser]);
       }
 
       this.set(this.KEYS.users, users.map(u => ({
@@ -147,26 +158,16 @@ const DB = {
     // For simplicity, we load all non-user tables filtered by tenant prefix
     const prefix = this.currentTenant + '_%';
     try {
-      const [
-        { data: categories },
-        { data: products },
-        { data: debtors },
-        { data: debts },
-        { data: sales },
-        { data: expenses },
-        { data: fixedExpenses },
-        { data: hours },
-        { data: cashSessions }
-      ] = await Promise.all([
-        this.supabase.from('categories').select('*'),
-        this.supabase.from('products').select('*'),
-        this.supabase.from('debtors').select('*'),
-        this.supabase.from('debts').select('*'),
-        this.supabase.from('sales').select('*'),
-        this.supabase.from('expenses').select('*'),
-        this.supabase.from('fixed_expenses').select('*'),
-        this.supabase.from('hours').select('*'),
-        this.supabase.from('cash_sessions').select('*')
+      const [categories, products, debtors, debts, sales, expenses, fixedExpenses, hours, cashSessions] = await Promise.all([
+        this._rest('GET', 'categories'),
+        this._rest('GET', 'products'),
+        this._rest('GET', 'debtors'),
+        this._rest('GET', 'debts'),
+        this._rest('GET', 'sales'),
+        this._rest('GET', 'expenses'),
+        this._rest('GET', 'fixed_expenses'),
+        this._rest('GET', 'hours'),
+        this._rest('GET', 'cash_sessions')
       ]);
 
       this.set(this.KEYS.categories, categories || []);
