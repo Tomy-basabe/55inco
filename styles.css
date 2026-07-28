@@ -116,6 +116,82 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--b
   animation: fadeUp .5s ease;
 }
 
+/* ───── Premium Login UI ───── */
+.premium-login-card {
+  width: 100%;
+  max-width: 380px !important;
+  padding: 48px 40px !important;
+  border-radius: 24px !important;
+  background: var(--bg) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  backdrop-filter: blur(10px);
+  animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.premium-login-logo {
+  height: 80px;
+  object-fit: contain;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.05));
+  animation: fadeUp 0.6s ease forwards;
+}
+
+.premium-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.premium-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-3);
+  transition: color 0.3s ease;
+}
+
+.premium-input {
+  width: 100%;
+  padding: 14px 14px 14px 42px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid var(--border) !important;
+  background: var(--bg2) !important;
+  color: var(--text) !important;
+  font-size: 14px !important;
+  transition: all 0.3s ease !important;
+}
+
+.premium-input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px rgba(160,128,96,0.15) !important;
+  outline: none;
+}
+
+.premium-input-wrap:focus-within .premium-input-icon {
+  color: var(--primary);
+}
+
+.premium-login-btn {
+  margin-top: 32px !important;
+  padding: 14px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%) !important;
+  box-shadow: 0 8px 16px rgba(160,128,96,0.2) !important;
+  transition: all 0.3s ease !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.premium-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(160,128,96,0.25) !important;
+}
+
+
 /* ───── Netflix Profile Selection ───── */
 .netflix-container {
   text-align: center;
