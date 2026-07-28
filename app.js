@@ -416,17 +416,19 @@ function processPinChange() {
   DB.saveUsers(users);
   closeModal();
   toast('Contraseña/PIN actualizado con éxito','success');
-  renderNetflixProfiles();
 }
 
-el('btn-logout').addEventListener('click', () => {
+function handleLogout() {
   DB.clearSession();
   currentUser = null;
   cart = [];
-  selectedProfileUser = null;
-  renderNetflixProfiles();
+  const loginEmail = el('login-email');
+  const loginPass = el('login-pass');
+  if (loginEmail) loginEmail.value = '';
+  if (loginPass) loginPass.value = '';
   showPage('page-login');
-});
+  toast('Sesión cerrada correctamente', 'info');
+}
 
 // ─── App Init ─────────────────────────────────────────────
 function initApp() {
@@ -434,9 +436,17 @@ function initApp() {
   renderSidebar();
   renderMobileNav();
   setupMobileControls();
+
+  // Bind logout button safely
+  const logoutBtn = el('btn-logout');
+  if (logoutBtn) {
+    logoutBtn.onclick = handleLogout;
+  }
+
   const defaultView = currentUser.role === 'jefe' ? 'view-dashboard' : 'view-venta';
   renderMainContent();
   showView(defaultView);
+  renderView(defaultView);
   updateMobileNavActive(defaultView);
 
   // Set mobile header user name
