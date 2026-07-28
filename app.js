@@ -3085,10 +3085,22 @@ function buildDeudores() {
 }
 
 function applyDeudoresFilters() {
+  const activeInputId = document.activeElement ? document.activeElement.id : null;
+  const cursorStart = document.activeElement ? document.activeElement.selectionStart : null;
+  const cursorEnd = document.activeElement ? document.activeElement.selectionEnd : null;
+
   window._deudoresSearch = el('deudores-search')?.value || '';
   window._deudoresSort = el('deudores-sort')?.value || 'name-asc';
   window._deudoresStatus = el('deudores-status')?.value || 'all';
   renderView('view-deudores');
+
+  if (activeInputId) {
+    const newEl = el(activeInputId);
+    if (newEl) {
+      newEl.focus();
+      try { newEl.setSelectionRange(cursorStart, cursorEnd); } catch(e) {}
+    }
+  }
 }
 
 function clearDeudoresFilters() {
