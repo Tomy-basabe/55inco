@@ -215,14 +215,24 @@ if (loginForm) {
 
     errorEl.style.display = 'none';
 
-    // 1. Authenticate user across ALL users (or we could rely on tenant isolation if users are strictly isolated, but username is globally unique usually)
-    // Actually we need to make sure the user exists
-    const users = DB.getUsers();
-    const user = users.find(u => u.username.toLowerCase() === email.toLowerCase());
+    // 1. Authenticate user using DB.findUser
+    let user = DB.findUser(email, password);
 
-    if (user && user.password === password) {
+    // If not found in local cache, do a fresh fetch from Supabase
+    if (!user) {
+      const loadingOverlay = document.getElementById('supabase-loading-overlay');
+      if (loadingOverlay) loadingOverlay.style.display = 'flex';
+      try {
+        await DB.initSupabase();
+      } catch(e) {}
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
+      user = DB.findUser(email, password);
+    }
+
+    if (user) {
       // 2. Set tenant and fetch their data
-      DB.setTenant(email);
+      const userTenant = user.username.includes('@') ? user.username : (email.includes('@') ? email : '5inco.com');
+      DB.setTenant(userTenant);
       const loadingOverlay = document.getElementById('supabase-loading-overlay');
       if (loadingOverlay) loadingOverlay.style.display = 'flex';
       
@@ -3957,64 +3967,45 @@ function bindHistoricoAdmin() {
 
 // ─── Auto-login check & Supabase Startup ──────────────────
 async function startApp() {
-  const users = DB.getUsers();
-  
-  const bootUI = async () => {
-    DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
-    
-    // We no longer render netflix profiles
-    // renderNetflixProfiles();
-    
-    const session = DB.getSession();
-    if (session && session.id) {
-      const user = DB.getUsers().find(u=>u.id===session.id);
-      if (user) {
-        currentUser = user;
-        
-        // Ensure tenant is loaded
-        DB.setTenant(user.username);
-        const loadingOverlay = document.getElementById('supabase-loading-overlay');
-        if (loadingOverlay) loadingOverlay.style.display = 'flex';
-        
-        try {
-          await DB.initTenantData();
-        } catch (e) {
-          console.error("Error loading tenant data", e);
-        }
-        if (loadingOverlay) loadingOverlay.style.display = 'none';
-
-        if (currentUser.role === 'cajero') {
-          const dateStr = today();
-          const hoursData = DB.getHours();
-          if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
-            const defaultHours = currentUser.defaultHours || 3.5;
-            DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-            toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
-          }
-        }
-        initApp();
-        return;
-      }
-    }
-    showPage('page-login');
-  };
-
-  if (users.length === 0) {
-    // Si no hay caché local, esperamos a Supabase (primera vez)
+  try {
     await DB.initSupabase();
-    await bootUI();
-  } else {
-    // Carga instantánea desde caché
-    bootUI();
-    // Sincronización silenciosa en background
-    DB.initSupabase().then(() => {
-      if (currentUser) {
-        const currentView = document.querySelector('.view-section.active')?.id;
-        if (currentView) renderView(currentView);
-      } else {
-        renderNetflixProfiles();
-      }
-    });
+  } catch(e) {
+    console.warn("Supabase init error:", e);
   }
+  
+  DB.seed(); // Garantiza el sembrado si está en modo local o Supabase está vacío
+  
+  const session = DB.getSession();
+  if (session && session.id) {
+    const user = DB.getUsers().find(u=>u.id===session.id);
+    if (user) {
+      currentUser = user;
+      
+      // Ensure tenant is loaded
+      DB.setTenant(user.username);
+      const loadingOverlay = document.getElementById('supabase-loading-overlay');
+      if (loadingOverlay) loadingOverlay.style.display = 'flex';
+      
+      try {
+        await DB.initTenantData();
+      } catch (e) {
+        console.error("Error loading tenant data", e);
+      }
+      if (loadingOverlay) loadingOverlay.style.display = 'none';
+
+      if (currentUser.role === 'cajero') {
+        const dateStr = today();
+        const hoursData = DB.getHours();
+        if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
+          const defaultHours = currentUser.defaultHours || 3.5;
+          DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+          toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+        }
+      }
+      initApp();
+      return;
+    }
+  }
+  showPage('page-login');
 }
 startApp();
