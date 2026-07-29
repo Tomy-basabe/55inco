@@ -209,10 +209,20 @@ const DB = {
       });
       this.set(this.KEYS.cashSession, cashObj);
       
-      this.set(this.KEYS.audit, (auditLogs || []).map(a => ({
-        id: a.id, date: a.date, userId: a.user_id, userName: a.user_name,
-        action: a.action, description: a.description, details: a.details
-      })));
+      if (auditLogs) {
+        const remoteAudits = auditLogs.map(a => ({
+          id: a.id, date: a.date, userId: a.user_id, userName: a.user_name,
+          action: a.action, description: a.description, details: a.details
+        }));
+        const localAudits = this.get(this.KEYS.audit) || [];
+        const merged = [...localAudits];
+        const localIds = new Set(merged.map(a => a.id));
+        for (const ra of remoteAudits) {
+          if (!localIds.has(ra.id)) merged.push(ra);
+        }
+        merged.sort((a,b) => a.date.localeCompare(b.date));
+        this.set(this.KEYS.audit, merged);
+      }
     } catch (e) {
       console.error('Error cargando datos del tenant:', e);
     }
