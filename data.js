@@ -174,7 +174,7 @@ const DB = {
       this.set(this.KEYS.categories, categories || []);
       this.set(this.KEYS.products, (products || []).map(p => ({
         id: p.id, name: p.name, categoryId: p.category_id,
-        price: Number(p.price || 0), talle: p.talle,
+        price: Number(p.price || 0), cost: Number(p.cost || 0), talle: p.talle,
         stock: Number(p.stock || 0), variants: p.variants || []
       })));
       this.set(this.KEYS.debtors, debtors || []);
@@ -461,17 +461,12 @@ const DB = {
     const p = { id: this.id(), ...data };
     prods.push(p); this.set(this.KEYS.products, prods);
     this.addAuditLog('product_create', `Prenda creada: "${p.name}" (${p.talle || 'sin talle'}) – Stock: ${p.stock} – Precio: $${p.price}`, { productId: p.id, name: p.name, talle: p.talle, price: p.price, stock: p.stock });
-    if (this.supabase) {
-      this.supabase.from('products').insert({
-        id: p.id,
-        name: p.name,
-        category_id: p.categoryId || null,
-        price: p.price,
-        talle: p.talle || null,
-        stock: p.stock,
-        variants: p.variants || []
-      }).then(({ error }) => { if (error) console.error('Error insertando producto en Supabase:', error); });
-    }
+      this._rest('POST', 'products', [{
+        id: p.id, tenant_id: this.currentTenant,
+        name: p.name, category_id: p.categoryId,
+        price: p.price, cost: p.cost || 0, talle: p.talle, stock: p.stock,
+        variants: p.variants
+      }]).catch(e => console.error('Error insertando producto en Supabase:', e));
     return p;
   },
   updateProduct(id, data) {
@@ -482,18 +477,12 @@ const DB = {
     this.addAuditLog('product_update', `Prenda editada: "${updated?.name || id}"`, { productId: id, old, new: updated });
     if (this.supabase) {
       const p = prods.find(x => x.id === id);
-      if (p) {
-        this.supabase.from('products').update({
-          name: p.name,
-          category_id: p.categoryId || null,
-          price: p.price,
-          talle: p.talle || null,
-          stock: p.stock,
-          variants: p.variants || []
-        }).eq('id', id).then(({ error }) => { if (error) console.error('Error actualizando producto en Supabase:', error); });
-      }
-    }
-  },
+        this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
+        name: data.name, category_id: data.categoryId,
+        price: data.price, cost: data.cost || 0, talle: data.talle, stock: data.stock,
+        variants: data.variants
+      }).catch(e => console.error('Error actualizando producto en Supabase:', e));  }
+    },
   deleteProduct(id) {
     const prod = this.getProducts().find(p => p.id === id);
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));

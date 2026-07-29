@@ -231,6 +231,101 @@ el('modal-overlay').addEventListener('click', e => { if (e.target === el('modal-
   });
 })();
 
+async function startApp() {
+  try {
+    const overlay = document.getElementById('supabase-loading-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    await DB.initSupabase();
+  } catch(e) {
+    console.warn('Supabase no inicializado, usando local');
+  }
+  initApp();
+}
+
+window.addEventListener('DOMContentLoaded', startApp);
+
+// ==========================================
+// REPORTES PREMIUM (PDF & CSV)
+// ==========================================
+
+function exportDropdown(tableSelector, filename, title) {
+  return `
+  <div class="dropdown" style="display:inline-block; position:relative;">
+    <button class="btn btn-secondary" onclick="const m=this.nextElementSibling; const isShow = m.style.display==='block'; document.querySelectorAll('.dropdown-menu').forEach(x=>x.style.display='none'); m.style.display = isShow ? 'none' : 'block'; event.stopPropagation();">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Exportar ▼
+    </button>
+    <div class="dropdown-menu" style="position:absolute; right:0; top:calc(100% + 5px); background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-lg); padding:5px; z-index:100; min-width:130px; display:none;">
+      <div onclick="exportTableToPDF('${tableSelector}', '${filename}', '${title}')" style="padding:8px 12px; cursor:pointer; font-size:13px; border-radius:var(--r-sm); display:flex; align-items:center; gap:6px;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='transparent'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg> PDF
+      </div>
+      <div onclick="exportTableToCSV('${tableSelector}', '${filename}')" style="padding:8px 12px; cursor:pointer; font-size:13px; border-radius:var(--r-sm); display:flex; align-items:center; gap:6px;" onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='transparent'">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> Excel (CSV)
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+function extractTableData(tableSelector) {
+  const table = document.querySelector(tableSelector);
+  if (!table) return { head: [], body: [] };
+  const ths = Array.from(table.querySelectorAll('thead th'));
+  const head = ths.map(th => th.innerText.trim()).filter(text => text.toLowerCase() !== 'acciones' && text !== '');
+  
+  const body = Array.from(table.querySelectorAll('tbody tr')).map(tr => {
+    if (tr.style.display === 'none') return null; // Skip hidden rows
+    const cells = Array.from(tr.querySelectorAll('td'));
+    const rowData = [];
+    cells.forEach((td, idx) => {
+      if (ths[idx]) {
+        const hText = ths[idx].innerText.trim().toLowerCase();
+        if (hText !== 'acciones' && hText !== '') {
+          rowData.push(td.innerText.replace(/\\n/g, ' - ').trim());
+        }
+      }
+    });
+    return rowData;
+  }).filter(r => r !== null && r.length > 0);
+  
+  return { head: [head], body };
+}
+
+function exportTableToPDF(tableSelector, filename, title) {
+  if (!window.jspdf) { toast('Librería PDF no cargada','error'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text(title, 14, 20);
+  const data = extractTableData(tableSelector);
+  doc.autoTable({
+    startY: 25,
+    head: data.head,
+    body: data.body,
+    theme: 'grid',
+    styles: { fontSize: 8 },
+    headStyles: { fillColor: [60, 60, 60] }
+  });
+  doc.save(filename + '.pdf');
+  toast('PDF generado con éxito', 'success');
+}
+
+function exportTableToCSV(tableSelector, filename) {
+  const data = extractTableData(tableSelector);
+  let csvContent = "data:text/csv;charset=utf-8,";
+  csvContent += data.head[0].map(h => `"${h.replace(/"/g, '""')}"`).join(',') + "\n";
+  data.body.forEach(row => {
+    csvContent += row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',') + "\n";
+  });
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", filename + ".csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast('CSV generado con éxito', 'success');
+}
+
 // ─── Login Controls ──────────────────────────
 
 const loginForm = el('email-login-form');
@@ -491,6 +586,15 @@ function initApp() {
   // Set mobile header user name
   const mobileUserName = el('mobile-user-name');
   if (mobileUserName) mobileUserName.textContent = currentUser.name;
+
+  if (!window._dropdownInit) {
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+      }
+    });
+    window._dropdownInit = true;
+  }
 }
 
 function renderSidebar() {
@@ -911,6 +1015,18 @@ function buildDashboard() {
     </div>
   </div>
 
+  ${currentUser.role === 'jefe' ? `
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px; margin-bottom:28px;">
+    <div class="card" style="padding:16px; min-height:280px;">
+      <h3 style="font-size:14px; margin-bottom:12px; font-weight:600;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg> Ventas y Rentabilidad (Últimos meses)</h3>
+      <div style="position:relative; height:240px; width:100%;"><canvas id="chart-monthly-sales"></canvas></div>
+    </div>
+    <div class="card" style="padding:16px; min-height:280px;">
+      <h3 style="font-size:14px; margin-bottom:12px; font-weight:600;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Top Categorías (Ingresos en el período)</h3>
+      <div style="position:relative; height:240px; width:100%;"><canvas id="chart-top-cats"></canvas></div>
+    </div>
+  </div>` : ''}
+
   ${lowStock.length ? `
   <div style="margin-bottom:28px;">
     <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
@@ -957,6 +1073,105 @@ function bindDashboard() {
         breakdown.style.display = 'none';
       }
     });
+  }
+
+  if (currentUser.role === 'jefe' && window.Chart) {
+    const ctxMonthly = document.getElementById('chart-monthly-sales');
+    const ctxCats = document.getElementById('chart-top-cats');
+    
+    if (ctxMonthly && ctxCats) {
+      if (window._chartMonthly) window._chartMonthly.destroy();
+      if (window._chartCats) window._chartCats.destroy();
+
+      const sales = DB.getSales().filter(s => !s.returned);
+      const months = [];
+      const dataVentas = [];
+      const dataGanancias = [];
+      for(let i=5; i>=0; i--) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - i);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const prefix = `${yyyy}-${mm}`;
+        months.push(prefix);
+        const mSales = sales.filter(s => s.date.startsWith(prefix));
+        const totalMes = mSales.reduce((a,s)=>a+s.totalFinal, 0);
+        
+        let gananciaMes = 0;
+        mSales.forEach(s => {
+          if(!s.cart) return;
+          s.cart.forEach(item => {
+            const prod = DB.getProducts().find(p=>p.id===item.id);
+            const cost = prod ? (prod.cost || 0) : 0;
+            gananciaMes += (item.price - cost) * item.qty;
+          });
+        });
+        
+        dataVentas.push(totalMes);
+        dataGanancias.push(gananciaMes);
+      }
+
+      const style = getComputedStyle(document.body);
+      const textColor = style.getPropertyValue('--text-2').trim() || '#94a3b8';
+
+      window._chartMonthly = new Chart(ctxMonthly, {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            { label: 'Ventas Totales', data: dataVentas, backgroundColor: '#3b82f6', borderRadius: 4 },
+            { label: 'Ganancia (Aprox)', data: dataGanancias, backgroundColor: '#10b981', borderRadius: 4 }
+          ]
+        },
+        options: { 
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: textColor } } },
+          scales: {
+            x: { ticks: { color: textColor }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: textColor }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+      
+      const intervalSales = sales.filter(s => {
+        const d = s.date.slice(0,10);
+        return d >= dashStartDate && d <= dashEndDate;
+      });
+      const catTotals = {};
+      intervalSales.forEach(s => {
+        if(!s.cart) return;
+        s.cart.forEach(item => {
+          const catId = item.categoryId || 'sin-categoria';
+          catTotals[catId] = (catTotals[catId] || 0) + (item.price * item.qty);
+        });
+      });
+      
+      const cats = DB.getCategories();
+      const labels = [];
+      const dataCats = [];
+      Object.entries(catTotals).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(([id, total]) => {
+        const c = cats.find(x=>x.id===id);
+        labels.push(c ? c.name : 'Otra');
+        dataCats.push(total);
+      });
+      
+      window._chartCats = new Chart(ctxCats, {
+        type: 'doughnut',
+        data: {
+          labels: labels.length ? labels : ['Sin datos'],
+          datasets: [{
+            data: dataCats.length ? dataCats : [1],
+            backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
+            borderWidth: 0
+          }]
+        },
+        options: { 
+          responsive: true, maintainAspectRatio: false, cutout: '70%', 
+          plugins: { legend: { position: 'right', labels: { color: textColor } } } 
+        }
+      });
+    }
   }
 }
 
@@ -1567,7 +1782,7 @@ function deleteCat(id) {
 //  STOCK / PRENDAS
 // ══════════════════════════════════════════════════════════
 function getVariants(p) {
-  return (p.variants && p.variants.length) ? p.variants : [{ label: 'Único', price: p.price, stock: p.stock }];
+  return (p.variants && p.variants.length) ? p.variants : [{ label: 'Único', price: p.price, stock: p.stock, cost: p.cost||0 }];
 }
 function getTotalStock(p) {
   const v = getVariants(p);
@@ -1592,6 +1807,7 @@ function buildStock() {
       ${cats.map(c=>`<div class="cat-filter" data-cat="${c.id}">${escapeHTML(c.name)}</div>`).join('')}
     </div>`;
 
+  const isAdmin = DB.getUser().role === 'jefe';
   const rows = prods.map(p => {
     const vars = getVariants(p);
     const totalStock = getTotalStock(p);
@@ -1599,7 +1815,8 @@ function buildStock() {
     const variantRows = hasMulti ? vars.map(v => `
       <div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px;">
         <span style="color:var(--text-2);">${escapeHTML(v.label)}</span>
-        <span style="font-weight:600;">${fmt(v.price)}</span>
+        ${isAdmin ? `<span style="color:var(--text-3);" title="Costo">C: $${v.cost||0}</span><span style="color:var(--text-3);" title="Margen">M: ${(v.price&&v.cost) ? Math.round(((v.price-v.cost)/v.cost)*100) : 0}%</span>` : ''}
+        <span style="font-weight:600;">$${fmt(v.price)}</span>
         <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">${v.stock}</span>
       </div>
     `).join('') : '';
@@ -1607,7 +1824,9 @@ function buildStock() {
     <tr data-cat="${p.categoryId}">
       <td><strong>${escapeHTML(p.name)}</strong>${p.talle ? `<br><small style="color:var(--text-3)">Talle: ${p.talle}</small>` : ''}</td>
       <td>${catMap[p.categoryId]||'-'}</td>
-      <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : fmt(vars[0].price)}</td>
+      <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : 
+        (isAdmin ? `<span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Costo">C: $${vars[0].cost||0}</span><span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Margen">M: ${(vars[0].price&&vars[0].cost)?Math.round(((vars[0].price-vars[0].cost)/vars[0].cost)*100):0}%</span>` : '') + `$${fmt(vars[0].price)}`
+      }</td>
       <td><span class="badge ${totalStock<=2?'badge-red':totalStock<=5?'badge-yellow':'badge-green'}">${hasMulti ? totalStock + ' total' : totalStock}</span></td>
       <td>
         <button class="btn btn-ghost btn-sm" onclick="openEditProduct('${p.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -1621,6 +1840,7 @@ function buildStock() {
     <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01"/></svg> Stock</h2>
     <p>Administrá tus prendas disponibles</p>
     <div class="view-actions">
+      ${isAdmin ? exportDropdown('.table-wrap table', 'Stock_Inventario', 'Inventario de Prendas') : ''}
       <button class="btn btn-primary" onclick="openNewProduct()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Nueva prenda</button>
     </div>
   </div>
@@ -1646,22 +1866,53 @@ function bindStock() {
   });
 }
 
-function variantRowHtml(idx, label, price, stock) {
+window.calcMargin = function(el) {
+  const row = el.closest('.variant-row');
+  const cost = parseFloat(row.querySelector('.vr-cost').value) || 0;
+  const margin = parseFloat(row.querySelector('.vr-margin').value) || 0;
+  if (cost > 0) {
+    row.querySelector('.vr-price').value = Math.round(cost * (1 + margin/100));
+  }
+};
+window.calcMarginFromPrice = function(el) {
+  const row = el.closest('.variant-row');
+  const costEl = row.querySelector('.vr-cost');
+  if(!costEl) return;
+  const cost = parseFloat(costEl.value) || 0;
+  const price = parseFloat(row.querySelector('.vr-price').value) || 0;
+  if (cost > 0) {
+    row.querySelector('.vr-margin').value = Math.round(((price - cost) / cost) * 100);
+  }
+};
+
+function variantRowHtml(idx, label, price, stock, cost = 0) {
+  const isAdmin = DB.getUser().role === 'jefe';
+  const margin = (price && cost) ? Math.round(((price - cost) / cost) * 100) : 0;
   return `
-  <div class="variant-row" data-idx="${idx}">
-    <div class="form-group">
+  <div class="variant-row" data-idx="${idx}" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; align-items:flex-end;">
+    <div class="form-group" style="flex:1; min-width:100px; margin-bottom:0;">
       <label style="font-size:11px;">Etiqueta</label>
-      <input class="vr-label" type="text" value="${label}" placeholder="Ej: Mayorista, Minorista" style="font-size:13px;"/>
+      <input class="vr-label" type="text" value="${label}" placeholder="Ej: Mayorista" style="font-size:13px;"/>
     </div>
-    <div class="form-group">
+    ${isAdmin ? `
+    <div class="form-group" style="width:75px; margin-bottom:0;">
+      <label style="font-size:11px;">Costo ($)</label>
+      <input class="vr-cost" type="number" value="${cost}" min="0" style="font-size:13px;" oninput="window.calcMargin(this)"/>
+    </div>
+    <div class="form-group" style="width:70px; margin-bottom:0;">
+      <label style="font-size:11px;">Margen %</label>
+      <input class="vr-margin" type="number" value="${margin}" style="font-size:13px;" oninput="window.calcMargin(this)"/>
+    </div>
+    ` : ''}
+    <div class="form-group" style="width:85px; margin-bottom:0;">
       <label style="font-size:11px;">Precio ($)</label>
-      <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;"/>
+      <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;" ${isAdmin ? 'oninput="window.calcMarginFromPrice(this)"' : ''}/>
     </div>
-    <div class="form-group">
+    <div class="form-group" style="width:65px; margin-bottom:0;">
       <label style="font-size:11px;">Stock</label>
       <input class="vr-stock" type="number" value="${stock}" min="0" style="font-size:13px;"/>
     </div>
-    <button class="btn btn-danger btn-sm btn-icon btn-remove-vr" onclick="this.closest('.variant-row').remove()" title="Quitar"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M18 6 6 18 M6 6l12 12"/></svg></button>
+    <button class="btn btn-danger btn-sm btn-icon btn-remove-vr" type="button" onclick="this.closest('.variant-row').remove()" title="Quitar" style="margin-bottom:2px;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:0px;"><path d="M18 6 6 18 M6 6l12 12"/></svg></button>
   </div>`;
 }
 
@@ -1669,7 +1920,7 @@ function addVariantRow(containerId) {
   const c = document.getElementById(containerId);
   if (!c) return;
   const idx = c.querySelectorAll('.variant-row').length;
-  c.insertAdjacentHTML('beforeend', variantRowHtml(idx, '', 0, 0));
+  c.insertAdjacentHTML('beforeend', variantRowHtml(idx, '', 0, 0, 0));
 }
 
 function collectVariants(containerId) {
@@ -1678,8 +1929,10 @@ function collectVariants(containerId) {
   rows.forEach(row => {
     const label = row.querySelector('.vr-label').value.trim() || `Precio ${variants.length+1}`;
     const price = parseFloat(row.querySelector('.vr-price').value) || 0;
+    const costEl = row.querySelector('.vr-cost');
+    const cost = costEl ? (parseFloat(costEl.value) || 0) : 0;
     const stock = parseInt(row.querySelector('.vr-stock').value) || 0;
-    variants.push({ label, price, stock });
+    variants.push({ label, price, cost, stock });
   });
   return variants;
 }
@@ -1706,7 +1959,7 @@ function openNewProduct(prefillCatId) {
         <button class="btn btn-ghost btn-sm" type="button" onclick="addVariantRow('np-variants')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Agregar precio</button>
       </div>
       <div id="np-variants">
-        ${variantRowHtml(0, 'Precio único', 0, 0)}
+        ${variantRowHtml(0, 'Precio único', 0, 0, 0)}
       </div>
       <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Podés agregar varios precios (ej: Mayorista, Minorista) con stock independiente para cada uno.</p>
     </div>
@@ -1748,8 +2001,9 @@ function saveNewProduct() {
   if (!name || !categoryId) { toast('Nombre y categoría son requeridos.','error'); return; }
   if (!variants.length) { toast('Agregá al menos un precio.','error'); return; }
   const price = variants[0].price;
+  const cost = variants[0].cost;
   const stock = variants.reduce((s,v) => s + v.stock, 0);
-  DB.addProduct({ name, categoryId, talle, price, stock, variants: variants.length > 1 ? variants : [] });
+  DB.addProduct({ name, categoryId, talle, price, cost, stock, variants: variants.length > 1 ? variants : [] });
   closeModal(); toast('Prenda agregada.','success');
   renderView('view-stock');
 }
@@ -1760,7 +2014,7 @@ function openEditProduct(id) {
   const cats = sortByName(DB.getCategories());
   const catOpts = cats.map(c=>`<option value="${c.id}" ${c.id===p.categoryId?'selected':''}>${escapeHTML(c.name)}</option>`).join('');
   const vars = getVariants(p);
-  const variantRowsHtml = vars.map((v, i) => variantRowHtml(i, v.label, v.price, v.stock)).join('');
+  const variantRowsHtml = vars.map((v, i) => variantRowHtml(i, v.label, v.price, v.stock, v.cost||0)).join('');
   openModal('Editar Prenda', `
     <div class="form-group"><label>Nombre</label><input id="ep-name" type="text" value="${escapeHTML(p.name)}"/></div>
     <div class="form-row cols-2">
@@ -1793,8 +2047,9 @@ function saveEditProduct(id) {
   if (!name) { toast('El nombre es requerido.','error'); return; }
   if (!variants.length) { toast('Agregá al menos un precio.','error'); return; }
   const price = variants[0].price;
+  const cost = variants[0].cost;
   const stock = variants.reduce((s,v) => s + v.stock, 0);
-  DB.updateProduct(id, { name, categoryId, talle, price, stock, variants: variants.length > 1 ? variants : [] });
+  DB.updateProduct(id, { name, categoryId, talle, price, cost, stock, variants: variants.length > 1 ? variants : [] });
   closeModal(); toast('Prenda actualizada.','success');
   renderView('view-stock');
 }
@@ -2156,25 +2411,6 @@ function updateCartItemPrice(cartKey, newPrice) {
   renderCartItems();
 }
 
-// updateCartTotals is defined below with full split-pay support
-
-function selectPay(type) {
-  // Obsolete - Split/Multi pay is now the standard default view
-}
-
-function calculateDirectChange() {
-  // Replaced by inline calculations in validateSplitAmounts
-}
-
-function toggleMultiPay(enabled) {
-  // Obsolete - Split/Multi pay is now permanent
-}
-
-// NOTE: duplicate updateCartTotals removed — the one above (line ~1661) is canonical.
-// This block now just delegates to add split-pay logic.
-(function patchUpdateCartTotals() {
-  // Wrap the existing updateCartTotals to also handle split-pay UI
-})();
 function updateCartTotals() {
   const prods = DB.getProducts();
   const sub = cart.reduce((a,c) => {
@@ -2669,7 +2905,7 @@ function buildHistorial() {
     <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Historial de Ventas</h2>
     <p>${filteredCombined.length} venta(s) mostrada(s) · Recaudado neto: <strong class="text-green">${fmt(total)}</strong></p>
     <div class="view-actions">
-      <button class="btn btn-secondary" onclick="exportHistorialCSV()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M7 10l5 5 5-5 M12 15V3"/></svg> Exportar Excel (CSV)</button>
+      ${exportDropdown('.table-wrap table', 'Historial_Ventas', 'Historial de Ventas')}
     </div>
   </div>
 
@@ -3158,7 +3394,7 @@ function clearHistorialFilters() {
   renderView('view-historial');
 }
 
-function exportHistorialCSV() {
+function exportHistorialToCSV() {
   const sales = DB.getSales().slice().reverse();
   const fromDate = window._historialFromDate || '';
   const toDate = window._historialToDate || '';
@@ -3194,8 +3430,6 @@ function exportHistorialCSV() {
   document.body.removeChild(link);
   toast('Archivo CSV exportado con éxito','success');
 }
-
-// (Removed old return logic)
 
 // ══════════════════════════════════════════════════════════
 //  DEUDORES
@@ -3272,7 +3506,8 @@ function buildDeudores() {
     <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Lista de Deudores</h2>
     <p>${allDebtors.length} deudor(es) total · <strong class="text-red">${withDebt} con deuda</strong> · Deuda total: <strong class="text-red">${fmt(totalDebt)}</strong></p>
     <div class="view-actions">
-      <button class="btn btn-primary" onclick="openNewDebtorModal()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M12 5v14 M5 12h14"/></svg> Nuevo deudor</button>
+      ${exportDropdown('#deudores-hidden-table', 'Lista_Deudores', 'Lista de Deudores')}
+      <button class="btn btn-primary" onclick="openNewDebtorModal()"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8 M20 8v6 M23 11h-6"/></svg> Nuevo deudor</button>
     </div>
   </div>
 
@@ -3310,7 +3545,14 @@ function buildDeudores() {
 
   <div id="deudores-list">
     ${debtors.length ? cards : '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg></div><p>No se encontraron deudores con esos filtros.</p></div>'}
-  </div>`;
+  </div>
+  <table id="deudores-hidden-table" style="display:none;">
+    <thead><tr><th>Nombre</th><th>Teléfono</th><th>Última Actividad</th><th>Deudas Pendientes</th><th>Total Adeudado ($)</th></tr></thead>
+    <tbody>
+      ${debtors.map(d => `<tr><td>${escapeHTML(d.name)}</td><td>${d.phone||'-'}</td><td>${d.lastActivity ? fmtDate(d.lastActivity) : '-'}</td><td>${d.pendingCount}</td><td>${d.balance}</td></tr>`).join('')}
+    </tbody>
+  </table>
+  `;
 }
 
 function applyDeudoresFilters() {
@@ -4003,6 +4245,9 @@ function buildHistoricoAdmin() {
   <div class="view-header">
     <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg> Historial Completo</h2>
     <p>Registro de absolutamente todos los movimientos del sistema</p>
+    <div class="view-actions">
+      ${exportDropdown('.table-wrap table', 'Auditoria_Sistema', 'Auditoría Completa del Sistema')}
+    </div>
   </div>
 
   <div class="card" style="padding:16px 20px; margin-bottom:20px;">
