@@ -2883,12 +2883,50 @@ function buildHistorial() {
   // Get date range inputs or defaults
   const fromDate = window._historialFromDate || '';
   const toDate = window._historialToDate || '';
+  const search = (window._historialSearch || '').toLowerCase();
+  const method = window._historialMethod || '';
+  const sort = window._historialSort || 'date-desc';
 
-  const filteredCombined = combined.filter(item => {
+  let filteredCombined = combined.filter(item => {
     const sDate = item.date.slice(0, 10);
     if (fromDate && sDate < fromDate) return false;
     if (toDate && sDate > toDate) return false;
+    
+    // Method filter
+    if (method) {
+      if (item._type === 'sale') {
+        if (item.payType !== method) return false;
+      } else {
+        if (method !== 'deudor') return false; 
+      }
+    }
+    
+    // Search filter
+    if (search) {
+      let match = false;
+      if (item._type === 'sale') {
+        if (item.cashier?.toLowerCase().includes(search)) match = true;
+        if (item.items?.some(i => i.name.toLowerCase().includes(search))) match = true;
+        const d = DB.getDebtors().find(x=>x.id===item.debtorId);
+        if (d?.name.toLowerCase().includes(search)) match = true;
+      } else {
+        const d = DB.getDebtors().find(x=>x.id===item.debtorId);
+        if (d?.name.toLowerCase().includes(search)) match = true;
+      }
+      if (!match) return false;
+    }
     return true;
+  });
+  
+  // Sorting
+  filteredCombined.sort((a, b) => {
+    if (sort === 'date-asc') return new Date(a.date) - new Date(b.date);
+    if (sort === 'date-desc') return new Date(b.date) - new Date(a.date);
+    const aTotal = a._type === 'sale' ? a.totalFinal : Math.abs(a.amount);
+    const bTotal = b._type === 'sale' ? b.totalFinal : Math.abs(b.amount);
+    if (sort === 'amount-asc') return aTotal - bTotal;
+    if (sort === 'amount-desc') return bTotal - aTotal;
+    return 0;
   });
 
   const rows = filteredCombined.map(item => {
@@ -2957,16 +2995,39 @@ function buildHistorial() {
     </div>
   </div>
 
-  <div class="filter-container">
+  <div class="filter-container" style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px; align-items:flex-end;">
     <div class="filter-item">
-      <label>Desde:</label>
-      <input type="date" id="hist-from" value="${fromDate}" onchange="applyHistorialFilters()"/>
+      <label style="font-size:11px; margin-bottom:4px; display:block;">Buscar (Producto/Cajero/Deudor)</label>
+      <input type="text" id="hist-search" value="${search}" placeholder="Buscar..." oninput="applyHistorialFilters()" style="padding:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--bg2); color:var(--text); width:200px;"/>
     </div>
     <div class="filter-item">
-      <label>Hasta:</label>
-      <input type="date" id="hist-to" value="${toDate}" onchange="applyHistorialFilters()"/>
+      <label style="font-size:11px; margin-bottom:4px; display:block;">Método de Pago</label>
+      <select id="hist-method" onchange="applyHistorialFilters()" style="padding:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--bg2); color:var(--text);">
+        <option value="">Todos</option>
+        <option value="efectivo" ${method==='efectivo'?'selected':''}>Efectivo</option>
+        <option value="debito" ${method==='debito'?'selected':''}>Débito/Crédito</option>
+        <option value="multi" ${method==='multi'?'selected':''}>Múltiple</option>
+        <option value="deudor" ${method==='deudor'?'selected':''}>Cuenta DNI / Deuda</option>
+      </select>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="clearHistorialFilters()">Limpiar filtros</button>
+    <div class="filter-item">
+      <label style="font-size:11px; margin-bottom:4px; display:block;">Ordenar por</label>
+      <select id="hist-sort" onchange="applyHistorialFilters()" style="padding:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--bg2); color:var(--text);">
+        <option value="date-desc" ${sort==='date-desc'?'selected':''}>Más recientes primero</option>
+        <option value="date-asc" ${sort==='date-asc'?'selected':''}>Más antiguas primero</option>
+        <option value="amount-desc" ${sort==='amount-desc'?'selected':''}>Mayor monto primero</option>
+        <option value="amount-asc" ${sort==='amount-asc'?'selected':''}>Menor monto primero</option>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label style="font-size:11px; margin-bottom:4px; display:block;">Desde</label>
+      <input type="date" id="hist-from" value="${fromDate}" onchange="applyHistorialFilters()" style="padding:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--bg2); color:var(--text);"/>
+    </div>
+    <div class="filter-item">
+      <label style="font-size:11px; margin-bottom:4px; display:block;">Hasta</label>
+      <input type="date" id="hist-to" value="${toDate}" onchange="applyHistorialFilters()" style="padding:6px; border-radius:var(--r-sm); border:1px solid var(--border); background:var(--bg2); color:var(--text);"/>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="clearHistorialFilters()" style="padding:6px 12px; height:32px;">Limpiar filtros</button>
   </div>
 
   <div class="table-wrap">
@@ -3433,12 +3494,18 @@ function finalizeExchange() {
 function applyHistorialFilters() {
   window._historialFromDate = el('hist-from')?.value || '';
   window._historialToDate = el('hist-to')?.value || '';
+  window._historialSearch = el('hist-search')?.value || '';
+  window._historialMethod = el('hist-method')?.value || '';
+  window._historialSort = el('hist-sort')?.value || 'date-desc';
   renderView('view-historial');
 }
 
 function clearHistorialFilters() {
   window._historialFromDate = '';
   window._historialToDate = '';
+  window._historialSearch = '';
+  window._historialMethod = '';
+  window._historialSort = 'date-desc';
   renderView('view-historial');
 }
 
