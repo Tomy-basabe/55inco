@@ -502,12 +502,13 @@ const DB = {
     this.addAuditLog('product_update', `Prenda editada: "${updated?.name || id}"`, { productId: id, old, new: updated });
     if (this.supabase) {
       const p = prods.find(x => x.id === id);
-        this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
-        name: data.name, category_id: data.categoryId,
-        price: data.price, cost: data.cost || 0, talle: data.talle, stock: data.stock,
-        variants: data.variants
-      }).catch(e => console.error('Error actualizando producto en Supabase:', e));  }
-    },
+      this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
+        name: p.name, category_id: p.categoryId,
+        price: p.price, cost: p.cost || 0, talle: p.talle, stock: p.stock,
+        variants: p.variants
+      }).catch(e => console.error('Error actualizando producto en Supabase:', e));
+    }
+  },
   deleteProduct(id) {
     const prod = this.getProducts().find(p => p.id === id);
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));
