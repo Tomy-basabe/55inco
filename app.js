@@ -380,18 +380,20 @@ if (loginForm) {
       const cashSess = DB.getCashSession(dateStr);
       const needsCash = !cashSess;
 
-      if (needsCash) {
-        DB.setCashSession(dateStr, {
-          openingCash: 0,
-          active: true,
-          openedBy: currentUser.name,
-          openedAt: new Date().toISOString()
-        });
-      }
-      if (needsHours) {
-        const defaultHours = currentUser.defaultHours || 3.5;
-        DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-        toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+      if (currentUser.role === 'cajero') {
+        if (needsCash) {
+          DB.setCashSession(dateStr, {
+            openingCash: 0,
+            active: true,
+            openedBy: currentUser.name,
+            openedAt: new Date().toISOString()
+          });
+        }
+        if (needsHours) {
+          const defaultHours = currentUser.defaultHours || 3.5;
+          DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+          toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+        }
       }
 
       initApp();
