@@ -380,15 +380,21 @@ if (loginForm) {
       const cashSess = DB.getCashSession(dateStr);
       const needsCash = !cashSess;
 
-      if (needsHours && needsCash) {
-        promptOpeningCashAndHours(dateStr);
-      } else if (needsHours) {
-        promptOpeningHours(dateStr);
-      } else if (needsCash) {
-        promptOpeningCashBox(dateStr);
-      } else {
-        initApp();
+      if (needsCash) {
+        DB.setCashSession(dateStr, {
+          openingCash: 0,
+          active: true,
+          openedBy: currentUser.name,
+          openedAt: new Date().toISOString()
+        });
       }
+      if (needsHours) {
+        const defaultHours = currentUser.defaultHours || 3.5;
+        DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+        toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+      }
+
+      initApp();
     } else {
       errorEl.textContent = 'Correo electrónico o contraseña incorrectos.';
       errorEl.style.display = 'block';
@@ -4532,6 +4538,16 @@ async function startApp() {
           const defaultHours = currentUser.defaultHours || 3.5;
           DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
           toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+        }
+        
+        const cashSess = DB.getCashSession(dateStr);
+        if (!cashSess) {
+          DB.setCashSession(dateStr, {
+            openingCash: 0,
+            active: true,
+            openedBy: currentUser.name,
+            openedAt: new Date().toISOString()
+          });
         }
       }
       initApp();
