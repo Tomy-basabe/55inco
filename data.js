@@ -56,11 +56,17 @@ const DB = {
 
   // ── Generic helpers ───────────────────
   get(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || []; }
+    try { 
+      const parsed = JSON.parse(localStorage.getItem(key));
+      return Array.isArray(parsed) ? parsed : [];
+    }
     catch { return []; }
   },
   getObj(key) {
-    try { return JSON.parse(localStorage.getItem(key)) || {}; }
+    try { 
+      const parsed = JSON.parse(localStorage.getItem(key));
+      return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
+    }
     catch { return {}; }
   },
   set(key, val) {
