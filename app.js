@@ -42,12 +42,19 @@ function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   el(id).classList.add('active');
 }
-function showView(id) {
+function showView(id, pushHash = true) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const v = el(id);
   if (v) v.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll(`[data-view="${id}"]`).forEach(n => n.classList.add('active'));
+  
+  if (pushHash) {
+    const hashStr = id.replace('view-', '');
+    if (window.location.hash !== '#' + hashStr) {
+      window.location.hash = hashStr;
+    }
+  }
 }
 function toast(msg, type = 'info') {
   const tc = el('toast-container');
@@ -427,6 +434,7 @@ function handleLogout() {
   if (loginEmail) loginEmail.value = '';
   if (loginPass) loginPass.value = '';
   showPage('page-login');
+  window.location.hash = '';
   toast('Sesión cerrada correctamente', 'info');
 }
 
@@ -443,7 +451,16 @@ function initApp() {
     logoutBtn.onclick = handleLogout;
   }
 
-  const defaultView = 'view-dashboard';
+  const hash = window.location.hash.replace('#', '');
+  const views = ['dashboard','venta','historial','deudores','gastos','mis-ganancias','empleados','categorias','stock','historico-admin'];
+  let defaultView = 'view-dashboard';
+  
+  if (hash && views.includes(hash)) {
+    if (!(currentUser.role !== 'jefe' && ['empleados','categorias','historico-admin','mis-ganancias'].includes(hash))) {
+      defaultView = 'view-' + hash;
+    }
+  }
+
   renderMainContent();
   showView(defaultView);
   renderView(defaultView);
@@ -579,9 +596,7 @@ function renderMobileNav() {
   container.querySelectorAll('.mobile-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.view;
-      showView(v);
-      renderView(v);
-      updateMobileNavActive(v);
+      window.location.hash = v.replace('view-', '');
     });
   });
 }
@@ -4135,4 +4150,19 @@ async function startApp() {
   }
   showPage('page-login');
 }
+window.addEventListener('hashchange', () => {
+  if (!currentUser) return; // If not logged in, ignore
+  const hash = window.location.hash.replace('#', '');
+  const views = ['dashboard','venta','historial','deudores','gastos','mis-ganancias','empleados','categorias','stock','historico-admin'];
+  if (hash && views.includes(hash)) {
+    if (currentUser.role !== 'jefe' && ['empleados','categorias','historico-admin','mis-ganancias'].includes(hash)) {
+      return;
+    }
+    const targetId = 'view-' + hash;
+    showView(targetId, false);
+    renderView(targetId);
+    updateMobileNavActive(targetId);
+  }
+});
+
 startApp();

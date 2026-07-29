@@ -158,7 +158,7 @@ const DB = {
     // For simplicity, we load all non-user tables filtered by tenant prefix
     const prefix = this.currentTenant + '_%';
     try {
-      const [categories, products, debtors, debts, sales, expenses, fixedExpenses, hours, cashSessions] = await Promise.all([
+      const [categories, products, debtors, debts, sales, expenses, fixedExpenses, hours, cashSessions, auditLogs] = await Promise.all([
         this._rest('GET', 'categories').catch(e => null),
         this._rest('GET', 'products').catch(e => null),
         this._rest('GET', 'debtors').catch(e => null),
@@ -167,7 +167,8 @@ const DB = {
         this._rest('GET', 'expenses').catch(e => null),
         this._rest('GET', 'fixed_expenses').catch(e => null),
         this._rest('GET', 'hours').catch(e => null),
-        this._rest('GET', 'cash_sessions').catch(e => null)
+        this._rest('GET', 'cash_sessions').catch(e => null),
+        this._rest('GET', 'audit_logs').catch(e => null)
       ]);
 
       this.set(this.KEYS.categories, categories || []);
@@ -207,6 +208,11 @@ const DB = {
         };
       });
       this.set(this.KEYS.cashSession, cashObj);
+      
+      this.set(this.KEYS.audit, (auditLogs || []).map(a => ({
+        id: a.id, date: a.date, userId: a.user_id, userName: a.user_name,
+        action: a.action, description: a.description, details: a.details
+      })));
     } catch (e) {
       console.error('Error cargando datos del tenant:', e);
     }
@@ -305,7 +311,7 @@ const DB = {
   },
 
   // ── Audit Log ─────────────────────────
-  getAuditLog() { return this.get(this.KEYS.audit); },
+  getAuditLog() { return this.get(this.KEYS.audit) || []; },
   addAuditLog(action, description, details = {}) {
     const logs = this.getAuditLog();
     const session = this.getSession();
@@ -322,6 +328,20 @@ const DB = {
     // Keep max 2000 entries
     if (logs.length > 2000) logs.splice(0, logs.length - 2000);
     this.set(this.KEYS.audit, logs);
+    
+    // Sync to Supabase
+    if (this.supabase && this.currentTenant) {
+      this._rest('POST', 'audit_logs', [{
+        id: entry.id,
+        date: entry.date,
+        user_id: entry.userId,
+        user_name: entry.userName,
+        action: entry.action,
+        description: entry.description,
+        details: entry.details,
+        tenant_id: this.currentTenant
+      }]).catch(e => console.warn('Supabase audit sync warning (table may not exist)', e));
+    }
   },
 
   // ── Session ───────────────────────────

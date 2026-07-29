@@ -1,6 +1,6 @@
 {
-  "name": "5inco Store",
-  "short_name": "5inco",
+  "name": "StackHard Sistema Ropa",
+  "short_name": "StackHard Sistema Ropa",
   "description": "Sistema de gestión para local de ropa",
   "start_url": "./index.html",
   "display": "standalone",
