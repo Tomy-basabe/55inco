@@ -393,8 +393,8 @@ const DB = {
       const uPass = String(u.password || '').trim();
       const uLowerPass = uPass.toLowerCase();
 
-      // Email / username matching (exact or alias)
-      let emailMatches = (uName === rawEmail);
+      // Email / username matching (exact, prefix match for 5inco.com, or alias)
+      let emailMatches = (uName === rawEmail || uName.split('@')[0] === rawEmail || uName === rawEmail + '@5inco.com');
 
       if (!emailMatches) {
         if ((rawEmail.includes('andrea') || rawEmail === 'andreatuta') && (uName.includes('andrea') || uName.includes('andreatuta'))) emailMatches = true;
