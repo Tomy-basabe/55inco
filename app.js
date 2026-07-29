@@ -1053,7 +1053,7 @@ function buildEmpleados() {
 
   Object.keys(domains).forEach(domain => {
     const domainUsers = domains[domain];
-    domainUsers.sort((a,b) => (a.role==='jefe'?0:1) - (b.role==='jefe'?1:0));
+    domainUsers.sort((a,b) => (a.role === 'jefe' ? -1 : 1) - (b.role === 'jefe' ? -1 : 1));
     const jefe = domainUsers.find(u => u.role === 'jefe') || domainUsers[0];
     const domainId = domain.replace(/[^a-z0-9]/g, '-');
 
