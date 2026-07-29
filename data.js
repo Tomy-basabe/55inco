@@ -455,7 +455,26 @@ const DB = {
   },
 
   // ── Products ──────────────────────────
-  getProducts() { return this.get(this.KEYS.products); },
+  getProducts() { 
+    const prods = this.get(this.KEYS.products); 
+    let migrated = false;
+    prods.forEach(p => {
+      if (p.cost === undefined && p.price !== undefined) {
+        p.cost = Math.round(p.price / 2);
+        migrated = true;
+      }
+      if (p.variants) {
+        p.variants.forEach(v => {
+          if (v.cost === undefined) {
+            v.cost = Math.round(v.price / 2);
+            migrated = true;
+          }
+        });
+      }
+    });
+    if (migrated) this.set(this.KEYS.products, prods);
+    return prods;
+  },
   addProduct(data) {
     const prods = this.getProducts();
     const p = { id: this.id(), ...data };

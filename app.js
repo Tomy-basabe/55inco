@@ -1876,22 +1876,45 @@ function bindStock() {
   });
 }
 
-window.calcMargin = function(el) {
+window.calcMarginFromCost = function(el) {
   const row = el.closest('.variant-row');
-  const cost = parseFloat(row.querySelector('.vr-cost').value) || 0;
-  const margin = parseFloat(row.querySelector('.vr-margin').value) || 0;
-  if (cost > 0) {
-    row.querySelector('.vr-price').value = Math.round(cost * (1 + margin/100));
+  const cost = parseFloat(el.value) || 0;
+  const priceEl = row.querySelector('.vr-price');
+  const marginEl = row.querySelector('.vr-margin');
+  if(!priceEl || !marginEl) return;
+  const price = parseFloat(priceEl.value) || 0;
+  
+  if (price > 0 && cost > 0) {
+    marginEl.value = Math.round(((price - cost) / cost) * 100);
   }
 };
+
+window.calcCostFromMargin = function(el) {
+  const row = el.closest('.variant-row');
+  const margin = parseFloat(el.value) || 0;
+  const priceEl = row.querySelector('.vr-price');
+  const costEl = row.querySelector('.vr-cost');
+  if(!priceEl || !costEl) return;
+  const price = parseFloat(priceEl.value) || 0;
+  const cost = parseFloat(costEl.value) || 0;
+  
+  if (price > 0) {
+    costEl.value = Math.round(price / (1 + margin/100));
+  } else if (cost > 0) {
+    priceEl.value = Math.round(cost * (1 + margin/100));
+  }
+};
+
 window.calcMarginFromPrice = function(el) {
   const row = el.closest('.variant-row');
+  const price = parseFloat(el.value) || 0;
   const costEl = row.querySelector('.vr-cost');
-  if(!costEl) return;
+  const marginEl = row.querySelector('.vr-margin');
+  if(!costEl || !marginEl) return;
   const cost = parseFloat(costEl.value) || 0;
-  const price = parseFloat(row.querySelector('.vr-price').value) || 0;
+  
   if (cost > 0) {
-    row.querySelector('.vr-margin').value = Math.round(((price - cost) / cost) * 100);
+    marginEl.value = Math.round(((price - cost) / cost) * 100);
   }
 };
 
@@ -1907,11 +1930,11 @@ function variantRowHtml(idx, label, price, stock, cost = 0) {
     ${isAdmin ? `
     <div class="form-group" style="width:75px; margin-bottom:0;">
       <label style="font-size:11px;">Costo ($)</label>
-      <input class="vr-cost" type="number" value="${cost}" min="0" style="font-size:13px;" oninput="window.calcMargin(this)"/>
+      <input class="vr-cost" type="number" value="${cost}" min="0" style="font-size:13px;" oninput="window.calcMarginFromCost(this)"/>
     </div>
     <div class="form-group" style="width:70px; margin-bottom:0;">
       <label style="font-size:11px;">Margen %</label>
-      <input class="vr-margin" type="number" value="${margin}" style="font-size:13px;" oninput="window.calcMargin(this)"/>
+      <input class="vr-margin" type="number" value="${margin}" style="font-size:13px;" oninput="window.calcCostFromMargin(this)"/>
     </div>
     ` : ''}
     <div class="form-group" style="width:85px; margin-bottom:0;">
