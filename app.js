@@ -1110,8 +1110,9 @@ function bindDashboard() {
         
         let gananciaMes = 0;
         mSales.forEach(s => {
-          if(!s.cart) return;
-          s.cart.forEach(item => {
+          if(!s.items && !s.cart) return;
+          const itemsArr = s.items || s.cart;
+          itemsArr.forEach(item => {
             const prod = DB.getProducts().find(p => p.id === (item.productId || item.id));
             let cost = 0;
             if (prod) {
@@ -1155,8 +1156,9 @@ function bindDashboard() {
       });
       const catTotals = {};
       intervalSales.forEach(s => {
-        if(!s.cart) return;
-        s.cart.forEach(item => {
+        if(!s.items && !s.cart) return;
+        const itemsArr = s.items || s.cart;
+        itemsArr.forEach(item => {
           const prod = DB.getProducts().find(p => p.id === (item.productId || item.id));
           const catId = prod ? prod.categoryId : 'sin-categoria';
           const itemPrice = item.customPrice || item.price || 0;
@@ -2833,7 +2835,7 @@ function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti
   const items = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
     const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
-    return { productId: c.productId, name: p?.name, price: price, qty: c.qty };
+    return { productId: c.productId, name: p?.name, price: price, qty: c.qty, variantIdx: c.variantIdx };
   });
 
   // Discount stock
