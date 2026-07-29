@@ -3040,25 +3040,39 @@ function buildHistorial() {
     }
   }).join('');
 
-  const total = filteredCombined.reduce((a, item) => {
+  let totalVendido = 0;
+  let totalRecaudado = 0;
+  let totalDeuda = 0;
+
+  filteredCombined.forEach(item => {
     if (item._type === 'sale' && !item.returned) {
+      totalVendido += item.totalFinal;
       if (item.payType === 'efectivo' || item.payType === 'debito') {
-        return a + item.totalFinal;
+        totalRecaudado += item.totalFinal;
       } else if (item.payType === 'multi' && item.splitDetails) {
-        return a + (item.splitDetails.cash || 0) + (item.splitDetails.card || 0);
+        totalRecaudado += (item.splitDetails.cash || 0) + (item.splitDetails.card || 0);
+        totalDeuda += (item.splitDetails.debt || 0);
+      } else if (item.payType === 'deudor') {
+        totalDeuda += item.totalFinal;
       }
     } else if (item._type === 'manual_debt') {
       if (item.amount < 0) {
-        return a + Math.abs(item.amount);
+        totalRecaudado += Math.abs(item.amount);
+      } else {
+        totalDeuda += item.amount;
       }
     }
-    return a;
-  }, 0);
+  });
   
   return `
   <div class="view-header">
     <h2><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Historial de Ventas</h2>
-    <p>${filteredCombined.length} venta(s) mostrada(s) · Recaudado neto: <strong class="text-green">${fmt(total)}</strong></p>
+    <div style="display:flex; gap:16px; margin-top:8px; font-size:13px; flex-wrap:wrap;">
+      <span>Registros: <strong>${filteredCombined.length}</strong></span>
+      <span>Total Vendido: <strong class="text-accent">${fmt(totalVendido)}</strong></span>
+      <span>Recaudado Neto: <strong class="text-green">${fmt(totalRecaudado)}</strong></span>
+      <span>Deuda Generada: <strong class="text-red">${fmt(totalDeuda)}</strong></span>
+    </div>
     <div class="view-actions">
       ${exportDropdown('.table-wrap table', 'Historial_Ventas', 'Historial de Ventas')}
     </div>
