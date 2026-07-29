@@ -3041,7 +3041,17 @@ function buildHistorial() {
   }).join('');
 
   const total = filteredCombined.reduce((a, item) => {
-    if (item._type === 'sale' && !item.returned) return a + item.totalFinal;
+    if (item._type === 'sale' && !item.returned) {
+      if (item.payType === 'efectivo' || item.payType === 'debito') {
+        return a + item.totalFinal;
+      } else if (item.payType === 'multi' && item.splitDetails) {
+        return a + (item.splitDetails.cash || 0) + (item.splitDetails.card || 0);
+      }
+    } else if (item._type === 'manual_debt') {
+      if (item.amount < 0) {
+        return a + Math.abs(item.amount);
+      }
+    }
     return a;
   }, 0);
   
