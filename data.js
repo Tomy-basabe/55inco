@@ -499,14 +499,18 @@ const DB = {
     const prods = this.getProducts().map(p => p.id === id ? { ...p, ...data } : p);
     this.set(this.KEYS.products, prods);
     const updated = prods.find(p => p.id === id);
-    this.addAuditLog('product_update', `Prenda editada: "${updated?.name || id}"`, { productId: id, old, new: updated });
-    if (this.supabase) {
-      const p = prods.find(x => x.id === id);
-      this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
-        name: p.name, category_id: p.categoryId,
-        price: p.price, cost: p.cost || 0, talle: p.talle, stock: p.stock,
-        variants: p.variants
-      }).catch(e => console.error('Error actualizando producto en Supabase:', e));
+    this.addAuditLog('product_update', `Prenda editada: "${updated?.name || id}"`, { productId: id });
+    if (this.supabase && updated) {
+      const payload = {};
+      if (updated.name !== undefined) payload.name = updated.name;
+      if (updated.categoryId !== undefined) payload.category_id = updated.categoryId;
+      if (updated.price !== undefined) payload.price = updated.price;
+      if (updated.stock !== undefined) payload.stock = updated.stock;
+      payload.cost = updated.cost || 0;
+      if (updated.talle !== undefined) payload.talle = updated.talle;
+      if (updated.variants !== undefined) payload.variants = updated.variants;
+      this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, payload)
+        .catch(e => console.error('Error actualizando producto en Supabase:', e));
     }
   },
   deleteProduct(id) {
@@ -526,17 +530,18 @@ const DB = {
     const s = { id: this.id(), date: new Date().toISOString(), ...sale };
     sales.push(s); this.set(this.KEYS.sales, sales);
     this.addAuditLog('sale_create', `Venta registrada – ${s.payType} – Total: $${s.totalFinal}`, { saleId: s.id, total: s.totalFinal, payType: s.payType });
-    if (this.supabase) {
+    if (this.supabase && this.currentTenant) {
       const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
-      this.supabase.from('sales').insert({
+      this._rest('POST', 'sales', [{
         id: s.id,
+        tenant_id: this.currentTenant,
         date: date,
         total_final: totalFinal,
         pay_type: payType,
         split_details: splitDetails || null,
         returned: returned || false,
         details: rest
-      }).then(({ error }) => { if (error) console.error('Error insertando venta en Supabase:', error); });
+      }]).catch(e => console.error('Error insertando venta en Supabase:', e));
     }
     return s;
   },

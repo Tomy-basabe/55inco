@@ -2865,44 +2865,53 @@ function confirmSale() {
 }
 
 function finalizeSale(totalFinal, subtotal, discAmt, discPct, surcharge, isMulti, splitCash, splitCard, splitDebt) {
-  const prods = DB.getProducts();
-  const items = cart.map(c => {
-    const p = prods.find(x=>x.id===c.productId);
-    const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
-    return { productId: c.productId, name: p?.name, price: price, qty: c.qty, variantIdx: c.variantIdx };
-  });
+  try {
+    const prods = DB.getProducts();
+    const items = cart.map(c => {
+      const p = prods.find(x=>x.id===c.productId);
+      const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
+      return { productId: c.productId, name: p?.name || 'Producto', price: price, qty: c.qty, variantIdx: c.variantIdx };
+    });
 
-  // Discount stock
-  cart.forEach(c => {
-    const p = prods.find(x=>x.id===c.productId);
-    if (p) DB.updateProduct(p.id, { stock: Math.max(0, p.stock - c.qty) });
-  });
+    // Discount stock
+    cart.forEach(c => {
+      const p = prods.find(x=>x.id===c.productId);
+      if (p) {
+        try { DB.updateProduct(p.id, { stock: Math.max(0, p.stock - c.qty) }); }
+        catch(e) { console.error('Error actualizando stock:', e); }
+      }
+    });
 
-  // Save sale
-  const sale = DB.addSale({
-    items, subtotal, discountPct: discPct, discountAmt: discAmt,
-    surcharge, totalFinal,
-    payType: isMulti ? 'multi' : salePayType, 
-    debtorId: saleDebtorId,
-    cashier: currentUser.name,
-    userId: currentUser.id,
-    splitDetails: isMulti ? { cash: splitCash, card: splitCard, debt: splitDebt } : null
-  });
+    // Save sale
+    const sale = DB.addSale({
+      items, subtotal, discountPct: discPct, discountAmt: discAmt,
+      surcharge, totalFinal,
+      payType: isMulti ? 'multi' : salePayType, 
+      debtorId: saleDebtorId,
+      cashier: currentUser.name || currentUser.username || 'Vendedor',
+      userId: currentUser.id,
+      splitDetails: isMulti ? { cash: splitCash, card: splitCard, debt: splitDebt } : null
+    });
 
-  // Add debt if debtor or multi-pay with debtor fraction
-  if (saleDebtorId) {
-    const debtAmount = isMulti ? splitDebt : totalFinal;
-    if (debtAmount > 0) {
-      DB.addDebt({ debtorId: saleDebtorId, saleId: sale.id, amount: debtAmount });
+    // Add debt if debtor or multi-pay with debtor fraction
+    if (saleDebtorId) {
+      const debtAmount = isMulti ? splitDebt : totalFinal;
+      if (debtAmount > 0) {
+        try { DB.addDebt({ debtorId: saleDebtorId, saleId: sale.id, amount: debtAmount }); }
+        catch(e) { console.error('Error registrando deuda:', e); }
+      }
     }
-  }
 
-  cart = [];
-  salePayType = 'efectivo';
-  saleDebtorId = null;
-  closeModal();
-  toast('¡Venta registrada exitosamente! <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z M12 9v4 M12 17h.01"/></svg>','success');
-  renderView('view-venta');
+    cart = [];
+    salePayType = 'efectivo';
+    saleDebtorId = null;
+    closeModal();
+    toast('¡Venta registrada exitosamente!','success');
+    renderView('view-venta');
+  } catch(err) {
+    console.error('Error en finalizeSale:', err);
+    toast('Error al registrar la venta: ' + err.message, 'error');
+  }
 }
 
 // ══════════════════════════════════════════════════════════
