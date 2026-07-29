@@ -43,9 +43,6 @@ function showPage(id) {
   el(id).classList.add('active');
   if (id === 'page-login') {
     window.location.hash = 'login';
-    if (el('mobile-logout-btn')) el('mobile-logout-btn').style.display = 'none';
-  } else {
-    if (el('mobile-logout-btn')) el('mobile-logout-btn').style.display = '';
   }
 }
 function showView(id, pushHash = true) {
@@ -708,6 +705,10 @@ function getMobileNavItems() {
     items.push({ view: 'view-mis-ganancias',   icon: MOBILE_ICONS.ganancias, label: 'Ganancias' });
     items.push({ view: 'view-stock',           icon: MOBILE_ICONS.stock,     label: 'Stock' });
   }
+  
+  // Add logout button for all users
+  items.push({ view: 'logout', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>', label: '<span style="color:var(--red)">Salir</span>' });
+
   return items;
 }
 
@@ -725,6 +726,10 @@ function renderMobileNav() {
   container.querySelectorAll('.mobile-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.view;
+      if (v === 'logout') {
+        handleLogout();
+        return;
+      }
       showView(v);
       renderView(v);
       updateMobileNavActive(v);

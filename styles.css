@@ -572,35 +572,7 @@ tr:hover td { background: var(--bg3); }
   margin-top: 4px;
 }
 
-.mobile-logout-btn {
-  display: none;
-}
 
-@media (max-width: 768px) {
-  .mobile-logout-btn {
-    display: flex;
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    width: 42px;
-    height: 42px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    color: var(--text-2);
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    transition: all 0.2s ease;
-  }
-  .mobile-logout-btn:active {
-    transform: scale(0.9);
-    color: var(--red);
-    border-color: var(--red);
-  }
-}
 .toast {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: var(--r-sm); padding: 12px 18px;
