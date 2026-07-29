@@ -1904,51 +1904,61 @@ function bindStock() {
   });
 }
 
+// ── Costo / Margen / Precio: si se completan 2/3, el sistema autocompleta el tercero ──
 window.calcMarginFromCost = function(el) {
+  // Triggered when COST changes
   const row = el.closest('.variant-row');
-  const cost = parseFloat(el.value) || 0;
-  const priceEl = row.querySelector('.vr-price');
+  const cost    = parseFloat(row.querySelector('.vr-cost')?.value)  || 0;
+  const price   = parseFloat(row.querySelector('.vr-price')?.value) || 0;
   const marginEl = row.querySelector('.vr-margin');
-  if(!priceEl || !marginEl) return;
-  const price = parseFloat(priceEl.value) || 0;
+  const priceEl  = row.querySelector('.vr-price');
+  if (!marginEl || !priceEl) return;
   const margin = parseFloat(marginEl.value) || 0;
-  
-  if (price > 0 && cost > 0) {
+
+  if (cost > 0 && price > 0) {
+    // cost + price known → calculate margin
     marginEl.value = Math.round(((price - cost) / cost) * 100);
   } else if (cost > 0 && margin > 0) {
-    priceEl.value = Math.round(cost * (1 + margin/100));
+    // cost + margin known → calculate price
+    priceEl.value = Math.round(cost * (1 + margin / 100));
   }
 };
 
 window.calcCostFromMargin = function(el) {
+  // Triggered when MARGIN changes
   const row = el.closest('.variant-row');
-  const margin = parseFloat(el.value) || 0;
+  const margin  = parseFloat(row.querySelector('.vr-margin')?.value) || 0;
+  const cost    = parseFloat(row.querySelector('.vr-cost')?.value)   || 0;
+  const price   = parseFloat(row.querySelector('.vr-price')?.value)  || 0;
+  const costEl  = row.querySelector('.vr-cost');
   const priceEl = row.querySelector('.vr-price');
-  const costEl = row.querySelector('.vr-cost');
-  if(!priceEl || !costEl) return;
-  const price = parseFloat(priceEl.value) || 0;
-  const cost = parseFloat(costEl.value) || 0;
-  
-  if (price > 0) {
-    costEl.value = Math.round(price / (1 + margin/100));
-  } else if (cost > 0) {
-    priceEl.value = Math.round(cost * (1 + margin/100));
+  if (!costEl || !priceEl) return;
+
+  if (margin > 0 && price > 0) {
+    // margin + price known → calculate cost
+    costEl.value = Math.round(price / (1 + margin / 100));
+  } else if (margin > 0 && cost > 0) {
+    // margin + cost known → calculate price
+    priceEl.value = Math.round(cost * (1 + margin / 100));
   }
 };
 
 window.calcMarginFromPrice = function(el) {
+  // Triggered when PRICE changes
   const row = el.closest('.variant-row');
-  const price = parseFloat(el.value) || 0;
-  const costEl = row.querySelector('.vr-cost');
+  const price   = parseFloat(row.querySelector('.vr-price')?.value)  || 0;
+  const cost    = parseFloat(row.querySelector('.vr-cost')?.value)   || 0;
+  const margin  = parseFloat(row.querySelector('.vr-margin')?.value) || 0;
   const marginEl = row.querySelector('.vr-margin');
-  if(!costEl || !marginEl) return;
-  const cost = parseFloat(costEl.value) || 0;
-  const margin = parseFloat(marginEl.value) || 0;
-  
-  if (cost > 0) {
+  const costEl   = row.querySelector('.vr-cost');
+  if (!marginEl || !costEl) return;
+
+  if (price > 0 && cost > 0) {
+    // price + cost known → calculate margin
     marginEl.value = Math.round(((price - cost) / cost) * 100);
   } else if (price > 0 && margin > 0) {
-    costEl.value = Math.round(price / (1 + margin/100));
+    // price + margin known → calculate cost
+    costEl.value = Math.round(price / (1 + margin / 100));
   }
 };
 
