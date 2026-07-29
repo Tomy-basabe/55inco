@@ -443,7 +443,7 @@ function initApp() {
     logoutBtn.onclick = handleLogout;
   }
 
-  const defaultView = currentUser.role === 'jefe' ? 'view-dashboard' : 'view-venta';
+  const defaultView = 'view-dashboard';
   renderMainContent();
   showView(defaultView);
   renderView(defaultView);
