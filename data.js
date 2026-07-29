@@ -159,15 +159,15 @@ const DB = {
     const prefix = this.currentTenant + '_%';
     try {
       const [categories, products, debtors, debts, sales, expenses, fixedExpenses, hours, cashSessions] = await Promise.all([
-        this._rest('GET', 'categories'),
-        this._rest('GET', 'products'),
-        this._rest('GET', 'debtors'),
-        this._rest('GET', 'debts'),
-        this._rest('GET', 'sales'),
-        this._rest('GET', 'expenses'),
-        this._rest('GET', 'fixed_expenses'),
-        this._rest('GET', 'hours'),
-        this._rest('GET', 'cash_sessions')
+        this._rest('GET', 'categories').catch(e => null),
+        this._rest('GET', 'products').catch(e => null),
+        this._rest('GET', 'debtors').catch(e => null),
+        this._rest('GET', 'debts').catch(e => null),
+        this._rest('GET', 'sales').catch(e => null),
+        this._rest('GET', 'expenses').catch(e => null),
+        this._rest('GET', 'fixed_expenses').catch(e => null),
+        this._rest('GET', 'hours').catch(e => null),
+        this._rest('GET', 'cash_sessions').catch(e => null)
       ]);
 
       this.set(this.KEYS.categories, categories || []);
