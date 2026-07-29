@@ -350,7 +350,7 @@ const DB = {
   clearSession() { localStorage.removeItem(this.KEYS.session); },
 
   // ── Users ─────────────────────────────
-  getUsers() { return this.get(this.KEYS.users); },
+  getUsers() { return this.get(this.KEYS.users) || []; },
   saveUsers(u) {
     this.set(this.KEYS.users, u);
     if (this.supabase) {

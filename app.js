@@ -666,17 +666,22 @@ function renderMainContent() {
 function renderView(v) {
   const el2 = el(v);
   if (!el2) return;
-  switch(v) {
-    case 'view-dashboard':        el2.innerHTML = buildDashboard(); bindDashboard(); break;
-    case 'view-empleados':         el2.innerHTML = buildEmpleados(); bindEmpleados(); break;
-    case 'view-stock':             el2.innerHTML = buildStock(); bindStock(); break;
-    case 'view-categorias':        el2.innerHTML = buildCategorias(); bindCategorias(); break;
-    case 'view-venta':             el2.innerHTML = buildVenta(); bindVenta(); break;
-    case 'view-historial':         el2.innerHTML = buildHistorial(); break;
-    case 'view-deudores':          el2.innerHTML = buildDeudores(); bindDeudores(); break;
-    case 'view-gastos':            el2.innerHTML = buildGastos(); bindGastos(); break;
-    case 'view-mis-ganancias':     el2.innerHTML = buildMisGanancias(); bindMisGanancias(); break;
-    case 'view-historico-admin':   el2.innerHTML = buildHistoricoAdmin(); bindHistoricoAdmin(); break;
+  try {
+    switch(v) {
+      case 'view-dashboard':        el2.innerHTML = buildDashboard(); bindDashboard(); break;
+      case 'view-empleados':         el2.innerHTML = buildEmpleados(); bindEmpleados(); break;
+      case 'view-stock':             el2.innerHTML = buildStock(); bindStock(); break;
+      case 'view-categorias':        el2.innerHTML = buildCategorias(); bindCategorias(); break;
+      case 'view-venta':             el2.innerHTML = buildVenta(); bindVenta(); break;
+      case 'view-historial':         el2.innerHTML = buildHistorial(); break;
+      case 'view-deudores':          el2.innerHTML = buildDeudores(); bindDeudores(); break;
+      case 'view-gastos':            el2.innerHTML = buildGastos(); bindGastos(); break;
+      case 'view-mis-ganancias':     el2.innerHTML = buildMisGanancias(); bindMisGanancias(); break;
+      case 'view-historico-admin':   el2.innerHTML = buildHistoricoAdmin(); bindHistoricoAdmin(); break;
+    }
+  } catch (e) {
+    el2.innerHTML = `<div style="padding:20px;color:red;"><b>Error en ${v}:</b> ${e.message}<br><pre>${e.stack}</pre></div>`;
+    console.error(`Error en renderView(${v}):`, e);
   }
 }
 
