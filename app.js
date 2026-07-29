@@ -381,18 +381,22 @@ if (loginForm) {
       const needsCash = !cashSess;
 
       if (currentUser.role === 'cajero') {
-        if (needsCash) {
-          DB.setCashSession(dateStr, {
-            openingCash: 0,
-            active: true,
-            openedBy: currentUser.name,
-            openedAt: new Date().toISOString()
-          });
-        }
-        if (needsHours) {
-          const defaultHours = currentUser.defaultHours || 3.5;
-          DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-          toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+        try {
+          if (needsCash) {
+            DB.setCashSession(dateStr, {
+              openingCash: 0,
+              active: true,
+              openedBy: currentUser.name || currentUser.username || 'Cajero',
+              openedAt: new Date().toISOString()
+            });
+          }
+          if (needsHours) {
+            const defaultHours = currentUser.defaultHours || 3.5;
+            DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+            toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+          }
+        } catch (err) {
+          console.error("Error auto-starting session:", err);
         }
       }
 
@@ -4534,22 +4538,26 @@ async function startApp() {
       if (loadingOverlay) loadingOverlay.style.display = 'none';
 
       if (currentUser.role === 'cajero') {
-        const dateStr = today();
-        const hoursData = DB.getHours();
-        if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
-          const defaultHours = currentUser.defaultHours || 3.5;
-          DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
-          toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
-        }
-        
-        const cashSess = DB.getCashSession(dateStr);
-        if (!cashSess) {
-          DB.setCashSession(dateStr, {
-            openingCash: 0,
-            active: true,
-            openedBy: currentUser.name,
-            openedAt: new Date().toISOString()
-          });
+        try {
+          const dateStr = today();
+          const hoursData = DB.getHours();
+          if (!hoursData[currentUser.id] || hoursData[currentUser.id][dateStr] === undefined) {
+            const defaultHours = currentUser.defaultHours || 3.5;
+            DB.setHoursForDay(currentUser.id, dateStr, defaultHours);
+            toast(`Se cargaron automáticamente tus ${defaultHours} hs del día de hoy.`, 'success');
+          }
+          
+          const cashSess = DB.getCashSession(dateStr);
+          if (!cashSess) {
+            DB.setCashSession(dateStr, {
+              openingCash: 0,
+              active: true,
+              openedBy: currentUser.name || currentUser.username || 'Cajero',
+              openedAt: new Date().toISOString()
+            });
+          }
+        } catch (err) {
+          console.error("Error auto-starting session on reload:", err);
         }
       }
       initApp();
