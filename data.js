@@ -184,18 +184,35 @@ const DB = {
         stock: Number(p.stock || 0), variants: p.variants || []
       })));
       this.set(this.KEYS.debtors, debtors || []);
-      this.set(this.KEYS.debts, (debts || []).map(d => ({
+      // Merge debts: keep local debts not in Supabase
+      const remoteDebts = (debts || []).map(d => ({
         id: d.id, debtorId: d.debtor_id,
         amount: Number(d.amount || 0), paid: d.paid,
         date: d.date, paidDate: d.paid_date,
         saleId: d.sale_id, detail: d.detail || null
-      })));
-      this.set(this.KEYS.sales, (sales || []).map(s => ({
+      }));
+      const localDebts = this.get(this.KEYS.debts);
+      const remoteDebtIds = new Set(remoteDebts.map(d => d.id));
+      const mergedDebts = [...remoteDebts];
+      for (const ld of localDebts) {
+        if (!remoteDebtIds.has(ld.id)) mergedDebts.push(ld);
+      }
+      this.set(this.KEYS.debts, mergedDebts);
+      // Merge sales: keep local sales that aren't in Supabase yet
+      const remoteSales = (sales || []).map(s => ({
         id: s.id, date: s.date,
         totalFinal: Number(s.total_final || 0),
         payType: s.pay_type, splitDetails: s.split_details,
         returned: s.returned, ...(s.details || {})
-      })));
+      }));
+      const localSales = this.get(this.KEYS.sales);
+      const remoteIds = new Set(remoteSales.map(s => s.id));
+      const mergedSales = [...remoteSales];
+      for (const ls of localSales) {
+        if (!remoteIds.has(ls.id)) mergedSales.push(ls);
+      }
+      mergedSales.sort((a, b) => new Date(a.date) - new Date(b.date));
+      this.set(this.KEYS.sales, mergedSales);
       this.set(this.KEYS.expenses, expenses || []);
       this.set(this.KEYS.fixedExpenses, fixedExpenses || []);
 
