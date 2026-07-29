@@ -722,7 +722,9 @@ function renderMobileNav() {
   container.querySelectorAll('.mobile-nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.view;
-      window.location.hash = v.replace('view-', '');
+      showView(v);
+      renderView(v);
+      updateMobileNavActive(v);
     });
   });
 }
