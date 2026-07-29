@@ -1112,9 +1112,14 @@ function bindDashboard() {
         mSales.forEach(s => {
           if(!s.cart) return;
           s.cart.forEach(item => {
-            const prod = DB.getProducts().find(p=>p.id===item.id);
-            const cost = prod ? (prod.cost || 0) : 0;
-            gananciaMes += (item.price - cost) * item.qty;
+            const prod = DB.getProducts().find(p => p.id === (item.productId || item.id));
+            let cost = 0;
+            if (prod) {
+              const vIdx = item.variantIdx !== undefined ? item.variantIdx : 0;
+              cost = prod.variants && prod.variants[vIdx] ? (prod.variants[vIdx].cost || 0) : (prod.cost || 0);
+            }
+            const itemPrice = item.customPrice || item.price || 0;
+            gananciaMes += (itemPrice - cost) * item.qty;
           });
         });
         
@@ -1130,8 +1135,8 @@ function bindDashboard() {
         data: {
           labels: months,
           datasets: [
-            { label: 'Ventas Totales', data: dataVentas, backgroundColor: '#3b82f6', borderRadius: 4 },
-            { label: 'Ganancia (Aprox)', data: dataGanancias, backgroundColor: '#10b981', borderRadius: 4 }
+            { label: 'Ventas Totales', data: dataVentas, backgroundColor: style.getPropertyValue('--accent').trim() || '#a08060', borderRadius: 4 },
+            { label: 'Ganancia (Aprox)', data: dataGanancias, backgroundColor: style.getPropertyValue('--green').trim() || '#6b9e6e', borderRadius: 4 }
           ]
         },
         options: { 
@@ -1152,8 +1157,10 @@ function bindDashboard() {
       intervalSales.forEach(s => {
         if(!s.cart) return;
         s.cart.forEach(item => {
-          const catId = item.categoryId || 'sin-categoria';
-          catTotals[catId] = (catTotals[catId] || 0) + (item.price * item.qty);
+          const prod = DB.getProducts().find(p => p.id === (item.productId || item.id));
+          const catId = prod ? prod.categoryId : 'sin-categoria';
+          const itemPrice = item.customPrice || item.price || 0;
+          catTotals[catId] = (catTotals[catId] || 0) + (itemPrice * item.qty);
         });
       });
       
@@ -1172,7 +1179,13 @@ function bindDashboard() {
           labels: labels.length ? labels : ['Sin datos'],
           datasets: [{
             data: dataCats.length ? dataCats : [1],
-            backgroundColor: ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'],
+            backgroundColor: [
+              style.getPropertyValue('--accent').trim() || '#a08060',
+              style.getPropertyValue('--accent-2').trim() || '#7a6040',
+              style.getPropertyValue('--text-2').trim() || '#b5a98c',
+              style.getPropertyValue('--text-3').trim() || '#786a55',
+              style.getPropertyValue('--green').trim() || '#6b9e6e'
+            ],
             borderWidth: 0
           }]
         },
