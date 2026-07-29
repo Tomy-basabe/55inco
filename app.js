@@ -1018,7 +1018,12 @@ function getWeekRange() {
 }
 
 function buildEmpleados() {
-  const users = DB.getUsers(); // Show both empleados and jefes
+  let users = DB.getUsers(); // Show both empleados and jefes
+  
+  if (currentUser.role !== 'admin') {
+     const myDomain = (currentUser.username.includes('@') ? currentUser.username.split('@')[1] : '').toLowerCase();
+     users = users.filter(u => u.username.toLowerCase().endsWith('@' + myDomain));
+  }
   
   if (!window._empleadosFromDate || !window._empleadosToDate) {
     const range = getWeekRange();
@@ -1036,48 +1041,73 @@ function buildEmpleados() {
 
   const hoursDataObj = DB.getHours(); // { userId: { 'YYYY-MM-DD': hs } }
 
-  let rows = users.map(u => {
-    // 1. Horas en el periodo
-    let totalHours = 0;
-    if (hoursDataObj[u.id]) {
-      Object.entries(hoursDataObj[u.id]).forEach(([d, hs]) => {
-        if (d >= fromD && d <= toD) totalHours += hs;
-      });
+  const domains = {};
+  users.forEach(u => {
+    if (u.username === 'stackhard@stackhard.com') return;
+    const domain = (u.username.includes('@') ? u.username.split('@')[1] : 'Otros').toLowerCase();
+    if (!domains[domain]) domains[domain] = [];
+    domains[domain].push(u);
+  });
+
+  let rows = '';
+
+  Object.keys(domains).forEach(domain => {
+    const domainUsers = domains[domain];
+    domainUsers.sort((a,b) => (a.role==='jefe'?0:1) - (b.role==='jefe'?1:0));
+    const jefe = domainUsers.find(u => u.role === 'jefe') || domainUsers[0];
+    const domainId = domain.replace(/[^a-z0-9]/g, '-');
+
+    if (currentUser.role === 'admin') {
+      rows += `
+      <tr style="cursor:pointer; background:var(--bg2)" onclick="toggleDomain('${domainId}')">
+        <td colspan="7">
+          <div class="flex-row">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="icon-${domainId}"><polyline points="9 18 15 12 9 6"/></svg>
+            <strong>Jefe: ${escapeHTML(jefe.name)}</strong> <span class="badge" style="margin-left:10px">${domain}</span>
+          </div>
+        </td>
+      </tr>`;
     }
-    const baseSalary = totalHours * (u.salaryHour || 0);
 
-    // 2. Ventas y Comisión
-    const userSales = sales.filter(s => s.userId === u.id || (!s.userId && s.cashier === u.name));
-    const totalSalesAmount = userSales.reduce((sum, s) => sum + s.totalFinal, 0);
-    const commissionPct = u.commissionPct || 0;
-    const commissionAmt = totalSalesAmount * (commissionPct / 100);
+    domainUsers.forEach(u => {
+      let totalHours = 0;
+      if (hoursDataObj[u.id]) {
+        Object.entries(hoursDataObj[u.id]).forEach(([d, hs]) => {
+          if (d >= fromD && d <= toD) totalHours += hs;
+        });
+      }
+      const baseSalary = totalHours * (u.salaryHour || 0);
 
-    const totalToPay = baseSalary + commissionAmt;
+      const userSales = sales.filter(s => s.userId === u.id || (!s.userId && s.cashier === u.name));
+      const totalSalesAmount = userSales.reduce((sum, s) => sum + s.totalFinal, 0);
+      const commissionPct = u.commissionPct || 0;
+      const commissionAmt = totalSalesAmount * (commissionPct / 100);
 
-    return `
-    <tr>
-      <td><div class="flex-row"><div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(u.name)}</div>${escapeHTML(u.name)}</div></td>
-      <td>${totalHours}h <span style="font-size:10px;color:var(--text-3)">(${fmt(u.salaryHour||0)}/h)</span></td>
-      <td>${fmt(baseSalary)}</td>
-      <td>${fmt(totalSalesAmount)}</td>
-      <td>${fmt(commissionAmt)} <span style="font-size:10px;color:var(--accent)">(${commissionPct}%)</span></td>
-      <td class="text-green" style="font-weight:700;">${fmt(totalToPay)}</td>
-      <td>
-        <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')" title="Editar">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-          Editar
-        </button>
-        <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')" title="Horas">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          Horas
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="openEmployeeSales('${u.id}', '${fromD}', '${toD}')" title="Ver ventas">
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-          Ventas
-        </button>
-      </td>
-    </tr>`;
-  }).join('');
+      const totalToPay = baseSalary + commissionAmt;
+      const rowStyle = (currentUser.role === 'admin') ? `display:none;` : ``;
+
+      rows += `
+      <tr class="domain-group-${domainId}" style="${rowStyle}">
+        <td><div class="flex-row"><div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(u.name)}</div>${escapeHTML(u.name)} <span style="font-size:10px;color:var(--text-3);margin-left:5px">(${u.role})</span></div></td>
+        <td>${totalHours}h <span style="font-size:10px;color:var(--text-3)">(${fmt(u.salaryHour||0)}/h)</span></td>
+        <td>${fmt(baseSalary)}</td>
+        <td>${fmt(totalSalesAmount)}</td>
+        <td>${fmt(commissionAmt)} <span style="font-size:10px;color:var(--accent)">(${commissionPct}%)</span></td>
+        <td class="text-green" style="font-weight:700;">${fmt(totalToPay)}</td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="openEmpleadoEdit('${u.id}')" title="Editar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openHorasEmpleado('${u.id}')" title="Horas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="openEmployeeSales('${u.id}', '${fromD}', '${toD}')" title="Ver ventas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+          </button>
+        </td>
+      </tr>`;
+    });
+  });
 
   return `
   <div class="view-header">
@@ -1102,6 +1132,19 @@ function buildEmpleados() {
       <tbody>${rows || '<tr><td colspan="7" style="text-align:center;color:var(--text-3)">Sin empleados</td></tr>'}</tbody>
     </table>
   </div>`;
+}
+
+function toggleDomain(domainId) {
+  const rows = document.querySelectorAll('.domain-group-' + domainId);
+  const icon = document.getElementById('icon-' + domainId);
+  let isHidden = false;
+  if (rows.length > 0) {
+    isHidden = rows[0].style.display === 'none';
+  }
+  rows.forEach(r => r.style.display = isHidden ? '' : 'none');
+  if (icon) {
+    icon.innerHTML = isHidden ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>';
+  }
 }
 
 function openEmployeeSales(userId, fromD, toD) {
