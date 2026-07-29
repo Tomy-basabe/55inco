@@ -2151,7 +2151,7 @@ function updateCartTotals() {
   
   // Set default cash input if empty
   const cashInput = el('v-split-cash');
-  if (cashInput && (cashInput.value === "" || parseFloat(cashInput.value) === 0)) {
+  if (cashInput && cashInput.value === "") {
     cashInput.value = total;
   }
   
@@ -2174,6 +2174,19 @@ function validateSplitAmounts() {
 
   if (cash < 0) { cash = 0; if(el('v-split-cash')) el('v-split-cash').value = 0; }
   if (card < 0) { card = 0; if(el('v-split-card')) el('v-split-card').value = 0; }
+  
+  const dsel = el('v-debtor-select');
+  const hasDebtor = dsel && dsel.value && dsel.value !== '__new__';
+  
+  let missing = baseTarget - (cash + card);
+  if (hasDebtor && missing > 0) {
+    debt = missing;
+    if (el('v-split-debt')) el('v-split-debt').value = parseFloat(debt.toFixed(2));
+  } else if (!hasDebtor) {
+    debt = 0;
+    if (el('v-split-debt')) el('v-split-debt').value = 0;
+  }
+  
   if (debt < 0) { debt = 0; if(el('v-split-debt')) el('v-split-debt').value = 0; }
 
   // Optional card surcharge
