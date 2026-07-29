@@ -3060,6 +3060,7 @@ function buildHistorial() {
         totalRecaudado += Math.abs(item.amount);
       } else {
         totalDeuda += item.amount;
+        totalVendido += item.amount;
       }
     }
   });
