@@ -2369,7 +2369,7 @@ function saveVentaCat() {
 
 function confirmSale() {
   const dateStr = new Date().toISOString().split('T')[0];
-  const todayReg = DB.getCashRegisters().find(r=>r.date === dateStr);
+  const todayReg = DB.getCashSession(dateStr);
   if (!todayReg && currentUser.role !== 'jefe') {
     // Just warn but do not return
     toast('Atención: La caja de hoy no ha sido inicializada.', 'error');
