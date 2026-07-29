@@ -178,11 +178,15 @@ const DB = {
       ]);
 
       this.set(this.KEYS.categories, categories || []);
-      this.set(this.KEYS.products, (products || []).map(p => ({
-        id: p.id, name: p.name, categoryId: p.category_id,
-        price: Number(p.price || 0), cost: Number(p.cost || 0), talle: p.talle,
-        stock: Number(p.stock || 0), variants: p.variants || []
-      })));
+      this.set(this.KEYS.products, (products || []).map(p => {
+        const firstVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : null;
+        const cost = firstVariant ? Number(firstVariant.cost || 0) : 0;
+        return {
+          id: p.id, name: p.name, categoryId: p.category_id,
+          price: Number(p.price || 0), cost, talle: p.talle,
+          stock: Number(p.stock || 0), variants: p.variants || []
+        };
+      }));
       this.set(this.KEYS.debtors, debtors || []);
       // Merge debts: keep local debts not in Supabase
       const remoteDebts = (debts || []).map(d => ({
@@ -371,8 +375,7 @@ const DB = {
         user_name: entry.userName,
         action: entry.action,
         description: entry.description,
-        details: entry.details,
-        tenant_id: this.currentTenant
+        details: entry.details
       }]).catch(e => console.warn('Supabase audit sync warning (table may not exist)', e));
     }
   },
@@ -452,7 +455,7 @@ const DB = {
     cats.push(cat); this.set(this.KEYS.categories, cats);
     this.addAuditLog('category_create', `Categoría creada: "${name}"`, { catId: cat.id, name });
     if (this.supabase) {
-      this._rest('POST', 'categories', [{ tenant_id: this.currentTenant, ...cat }]).catch(e => console.error(e));
+      this._rest('POST', 'categories', [{ ...cat }]).catch(e => console.error(e));
     }
     return cat;
   },
@@ -461,7 +464,7 @@ const DB = {
     this.set(this.KEYS.categories, this.getCategories().filter(c => c.id !== id));
     this.addAuditLog('category_delete', `Categoría eliminada: "${cat ? cat.name : id}"`, { catId: id });
     if (this.supabase) {
-      this._rest('DELETE', `categories?id=eq.${id}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+      this._rest('DELETE', `categories?id=eq.${id}`).catch(e => console.error(e));
     }
   },
   updateCategory(id, name) {
@@ -470,7 +473,7 @@ const DB = {
     this.set(this.KEYS.categories, cats);
     this.addAuditLog('category_update', `Categoría renombrada: "${old ? old.name : id}" → "${name}"`, { catId: id, oldName: old?.name, newName: name });
     if (this.supabase) {
-      this._rest('PATCH', `categories?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, { name }).catch(e => console.error(e));
+      this._rest('PATCH', `categories?id=eq.${id}`, { name }).catch(e => console.error(e));
     }
   },
 
@@ -500,12 +503,17 @@ const DB = {
     const p = { id: this.id(), ...data };
     prods.push(p); this.set(this.KEYS.products, prods);
     this.addAuditLog('product_create', `Prenda creada: "${p.name}" (${p.talle || 'sin talle'}) – Stock: ${p.stock} – Precio: $${p.price}`, { productId: p.id, name: p.name, talle: p.talle, price: p.price, stock: p.stock });
+    if (this.supabase) {
+      // Build variants array for Supabase (includes cost in JSONB)
+      const remoteVariants = (p.variants && p.variants.length > 0)
+        ? p.variants
+        : [{ label: 'Único', price: p.price, stock: p.stock, cost: p.cost || 0 }];
       this._rest('POST', 'products', [{
-        id: p.id, tenant_id: this.currentTenant,
-        name: p.name, category_id: p.categoryId,
-        price: p.price, cost: p.cost || 0, talle: p.talle, stock: p.stock,
-        variants: p.variants
+        id: p.id, name: p.name, category_id: p.categoryId,
+        price: p.price, talle: p.talle || null, stock: p.stock,
+        variants: remoteVariants
       }]).catch(e => console.error('Error insertando producto en Supabase:', e));
+    }
     return p;
   },
   updateProduct(id, data) {
@@ -520,10 +528,13 @@ const DB = {
       if (updated.categoryId !== undefined) payload.category_id = updated.categoryId;
       if (updated.price !== undefined) payload.price = updated.price;
       if (updated.stock !== undefined) payload.stock = updated.stock;
-      payload.cost = updated.cost || 0;
-      if (updated.talle !== undefined) payload.talle = updated.talle;
-      if (updated.variants !== undefined) payload.variants = updated.variants;
-      this._rest('PATCH', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, payload)
+      if (updated.talle !== undefined) payload.talle = updated.talle || null;
+      // Embed cost inside variants JSONB (no cost column in Supabase)
+      const remoteVariants = (updated.variants && updated.variants.length > 0)
+        ? updated.variants
+        : [{ label: 'Único', price: updated.price, stock: updated.stock, cost: updated.cost || 0 }];
+      payload.variants = remoteVariants;
+      this._rest('PATCH', `products?id=eq.${id}`, payload)
         .catch(e => console.error('Error actualizando producto en Supabase:', e));
     }
   },
@@ -532,7 +543,7 @@ const DB = {
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));
     this.addAuditLog('product_delete', `Prenda eliminada: "${prod ? prod.name : id}"`, { productId: id, name: prod?.name });
     if (this.supabase) {
-      this._rest('DELETE', `products?id=eq.${id}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+      this._rest('DELETE', `products?id=eq.${id}`).catch(e => console.error(e));
     }
   },
 
@@ -547,7 +558,6 @@ const DB = {
       const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
       this._rest('POST', 'sales', [{
         id: s.id,
-        tenant_id: this.currentTenant,
         date: date,
         total_final: totalFinal,
         pay_type: payType,
@@ -568,7 +578,7 @@ const DB = {
     if (this.supabase) {
       if (s) {
         const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
-        this._rest('PATCH', `sales?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
+        this._rest('PATCH', `sales?id=eq.${id}`, {
           total_final: totalFinal,
           pay_type: payType,
           split_details: splitDetails || null,
@@ -587,7 +597,7 @@ const DB = {
     debtors.push(d); this.set(this.KEYS.debtors, debtors);
     this.addAuditLog('debtor_create', `Deudor creado: "${d.name}"`, { debtorId: d.id, name: d.name, phone: d.phone });
     if (this.supabase) {
-      this._rest('POST', 'debtors', [{ tenant_id: this.currentTenant, ...d }]).catch(e => console.error(e));
+      this._rest('POST', 'debtors', [{ ...d }]).catch(e => console.error(e));
     }
     return d;
   },
@@ -599,7 +609,7 @@ const DB = {
     if (this.supabase) {
       const d = debtors.find(x => x.id === id);
       if (d) {
-        this._rest('PATCH', `debtors?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, d).catch(e => console.error(e));
+        this._rest('PATCH', `debtors?id=eq.${id}`, d).catch(e => console.error(e));
       }
     }
   },
@@ -608,7 +618,7 @@ const DB = {
     this.set(this.KEYS.debtors, this.getDebtors().filter(d => d.id !== id));
     this.addAuditLog('debtor_delete', `Deudor eliminado: "${deb ? deb.name : id}"`, { debtorId: id });
     if (this.supabase) {
-      this._rest('DELETE', `debtors?id=eq.${id}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+      this._rest('DELETE', `debtors?id=eq.${id}`).catch(e => console.error(e));
     }
   },
 
@@ -621,7 +631,6 @@ const DB = {
 
     if (this.supabase) {
       this._rest('POST', 'debts', [{
-        tenant_id: this.currentTenant,
         id: d.id,
         debtor_id: d.debtorId,
         amount: d.amount,
@@ -642,7 +651,7 @@ const DB = {
     const debtor = debt ? this.getDebtors().find(d => d.id === debt.debtorId) : null;
     this.addAuditLog('debt_paid', `Deuda cobrada – ${debtor ? debtor.name : 'Deudor'} – $${debt ? debt.amount : '?'}`, { debtId: id, amount: debt?.amount, debtorName: debtor?.name });
     if (this.supabase) {
-      this._rest('PATCH', `debts?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, {
+      this._rest('PATCH', `debts?id=eq.${id}`, {
         paid: true,
         paid_date: dateStr
       }).catch(e => console.error(e));
@@ -668,11 +677,10 @@ const DB = {
     }
     if (this.supabase) {
       this._rest('POST', 'hours', [{
-        tenant_id: this.currentTenant,
         user_id: userId,
         date: date,
         hours: hours
-      }], '?on_conflict=user_id,date,tenant_id').catch(e => console.error(e));
+      }], '?on_conflict=user_id,date').catch(e => console.error(e));
     }
   },
   removeHoursForDay(userId, dateStr) {
@@ -682,7 +690,7 @@ const DB = {
       this.set(this.KEYS.hours, h);
       this.addAuditLog('hours_delete', `Registro de horas eliminado – ${dateStr}`, { userId, dateStr });
       if (this.supabase) {
-        this._rest('DELETE', `hours?user_id=eq.${userId}&date=eq.${dateStr}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+        this._rest('DELETE', `hours?user_id=eq.${userId}&date=eq.${dateStr}`).catch(e => console.error(e));
       }
     }
   },
@@ -714,7 +722,6 @@ const DB = {
     this.addAuditLog('expense_create', `Gasto registrado – $${e.amount} – ${e.description || e.detail || 'Sin descripción'}`, { expenseId: e.id, amount: e.amount, description: e.description || e.detail });
     if (this.supabase) {
       this._rest('POST', 'expenses', [{
-        tenant_id: this.currentTenant,
         id: e.id,
         date: e.date,
         amount: e.amount,
@@ -728,7 +735,7 @@ const DB = {
     this.set(this.KEYS.expenses, this.getExpenses().filter(e => e.id !== id));
     this.addAuditLog('expense_delete', `Gasto eliminado – $${exp ? exp.amount : '?'} – ${exp?.description || exp?.detail || ''}`, { expenseId: id });
     if (this.supabase) {
-      this._rest('DELETE', `expenses?id=eq.${id}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+      this._rest('DELETE', `expenses?id=eq.${id}`).catch(e => console.error(e));
     }
   },
 
@@ -740,21 +747,21 @@ const DB = {
     fe.push(item); this.set(this.KEYS.fixedExpenses, fe);
 
     if (this.supabase) {
-      this._rest('POST', 'fixed_expenses', [{ tenant_id: this.currentTenant, ...item }]).catch(e => console.error(e));
+      this._rest('POST', 'fixed_expenses', [{ ...item }]).catch(e => console.error(e));
     }
     return item;
   },
   deleteFixedExpense(id) {
     this.set(this.KEYS.fixedExpenses, this.getFixedExpenses().filter(f => f.id !== id));
     if (this.supabase) {
-      this._rest('DELETE', `fixed_expenses?id=eq.${id}&tenant_id=eq.${this.currentTenant}`).catch(e => console.error(e));
+      this._rest('DELETE', `fixed_expenses?id=eq.${id}`).catch(e => console.error(e));
     }
   },
   updateFixedExpense(id, name, amount) {
     const fe = this.getFixedExpenses().map(f => f.id === id ? { ...f, name, amount } : f);
     this.set(this.KEYS.fixedExpenses, fe);
     if (this.supabase) {
-      this._rest('PATCH', `fixed_expenses?id=eq.${id}&tenant_id=eq.${this.currentTenant}`, { name, amount }).catch(e => console.error(e));
+      this._rest('PATCH', `fixed_expenses?id=eq.${id}`, { name, amount }).catch(e => console.error(e));
     }
   },
 
@@ -773,13 +780,12 @@ const DB = {
     }
     if (this.supabase) {
       this._rest('POST', 'cash_sessions', [{
-        tenant_id: this.currentTenant,
         date: dateStr,
         opening_cash: data.openingCash,
         active: data.active,
         opened_by: data.openedBy,
         opened_at: data.openedAt
-      }], '?on_conflict=date,tenant_id').catch(e => console.error(e));
+      }], '?on_conflict=date').catch(e => console.error(e));
     }
   },
 
@@ -790,7 +796,6 @@ const DB = {
     if (this.supabase) {
       const promises = users.map(user =>
         this._rest('POST', 'users', [{
-          tenant_id: this.currentTenant,
           id: user.id,
           name: user.name,
           username: user.username,

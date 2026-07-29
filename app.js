@@ -1853,7 +1853,7 @@ function buildStock() {
     const variantRows = hasMulti ? vars.map(v => `
       <div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--border);font-size:12px;">
         <span style="color:var(--text-2);">${escapeHTML(v.label)}</span>
-        ${isAdmin ? `<span style="color:var(--text-3);" title="Costo">C: $${v.cost||0}</span><span style="color:var(--text-3);" title="Margen">M: ${(v.price&&v.cost) ? Math.round(((v.price-v.cost)/v.cost)*100) : 0}%</span>` : ''}
+        <span style="color:var(--text-3);" title="Costo">C: $${v.cost||0}</span><span style="color:var(--text-3);" title="Margen">M: ${(v.price&&v.cost) ? Math.round(((v.price-v.cost)/v.cost)*100) : 0}%</span>
         <span style="font-weight:600;">$${fmt(v.price)}</span>
         <span class="badge ${v.stock<=2?'badge-red':v.stock<=5?'badge-yellow':'badge-green'}" style="font-size:11px;">${v.stock}</span>
       </div>
@@ -1863,7 +1863,7 @@ function buildStock() {
       <td><strong>${escapeHTML(p.name)}</strong>${p.talle ? `<br><small style="color:var(--text-3)">Talle: ${p.talle}</small>` : ''}</td>
       <td>${catMap[p.categoryId]||'-'}</td>
       <td>${hasMulti ? `<div style="min-width:160px;">${variantRows}</div>` : 
-        (isAdmin ? `<span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Costo">C: $${vars[0].cost||0}</span><span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Margen">M: ${(vars[0].price&&vars[0].cost)?Math.round(((vars[0].price-vars[0].cost)/vars[0].cost)*100):0}%</span>` : '') + `$${fmt(vars[0].price)}`
+        (`<span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Costo">C: $${vars[0].cost||0}</span><span style="font-size:11px;color:var(--text-3);margin-right:5px;" title="Margen">M: ${(vars[0].price&&vars[0].cost)?Math.round(((vars[0].price-vars[0].cost)/vars[0].cost)*100):0}%</span>`) + `$${fmt(vars[0].price)}`
       }</td>
       <td><span class="badge ${totalStock<=2?'badge-red':totalStock<=5?'badge-yellow':'badge-green'}">${hasMulti ? totalStock + ' total' : totalStock}</span></td>
       <td>
@@ -1911,9 +1911,12 @@ window.calcMarginFromCost = function(el) {
   const marginEl = row.querySelector('.vr-margin');
   if(!priceEl || !marginEl) return;
   const price = parseFloat(priceEl.value) || 0;
+  const margin = parseFloat(marginEl.value) || 0;
   
   if (price > 0 && cost > 0) {
     marginEl.value = Math.round(((price - cost) / cost) * 100);
+  } else if (cost > 0 && margin > 0) {
+    priceEl.value = Math.round(cost * (1 + margin/100));
   }
 };
 
@@ -1940,9 +1943,12 @@ window.calcMarginFromPrice = function(el) {
   const marginEl = row.querySelector('.vr-margin');
   if(!costEl || !marginEl) return;
   const cost = parseFloat(costEl.value) || 0;
+  const margin = parseFloat(marginEl.value) || 0;
   
   if (cost > 0) {
     marginEl.value = Math.round(((price - cost) / cost) * 100);
+  } else if (price > 0 && margin > 0) {
+    costEl.value = Math.round(price / (1 + margin/100));
   }
 };
 
@@ -1955,7 +1961,7 @@ function variantRowHtml(idx, label, price, stock, cost = 0) {
       <label style="font-size:11px;">Etiqueta</label>
       <input class="vr-label" type="text" value="${label}" placeholder="Ej: Mayorista" style="font-size:13px;"/>
     </div>
-    ${isAdmin ? `
+    
     <div class="form-group" style="width:75px; margin-bottom:0;">
       <label style="font-size:11px;">Costo ($)</label>
       <input class="vr-cost" type="number" value="${cost}" min="0" style="font-size:13px;" oninput="window.calcMarginFromCost(this)"/>
@@ -1964,10 +1970,10 @@ function variantRowHtml(idx, label, price, stock, cost = 0) {
       <label style="font-size:11px;">Margen %</label>
       <input class="vr-margin" type="number" value="${margin}" style="font-size:13px;" oninput="window.calcCostFromMargin(this)"/>
     </div>
-    ` : ''}
+    
     <div class="form-group" style="width:85px; margin-bottom:0;">
       <label style="font-size:11px;">Precio ($)</label>
-      <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;" ${isAdmin ? 'oninput="window.calcMarginFromPrice(this)"' : ''}/>
+      <input class="vr-price" type="number" value="${price}" min="0" style="font-size:13px;" oninput="window.calcMarginFromPrice(this)"/>
     </div>
     <div class="form-group" style="width:65px; margin-bottom:0;">
       <label style="font-size:11px;">Stock</label>
