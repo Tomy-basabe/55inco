@@ -1020,7 +1020,8 @@ function getWeekRange() {
 function buildEmpleados() {
   let users = DB.getUsers(); // Show both empleados and jefes
   
-  if (currentUser.role !== 'admin') {
+  const isAdmin = currentUser.role === 'admin' || currentUser.username === 'stackhard@stackhard.com';
+  if (!isAdmin) {
      const myDomain = (currentUser.username.includes('@') ? currentUser.username.split('@')[1] : '').toLowerCase();
      users = users.filter(u => u.username.toLowerCase().endsWith('@' + myDomain));
   }
@@ -1057,7 +1058,8 @@ function buildEmpleados() {
     const jefe = domainUsers.find(u => u.role === 'jefe') || domainUsers[0];
     const domainId = domain.replace(/[^a-z0-9]/g, '-');
 
-    if (currentUser.role === 'admin') {
+    const isAdmin = currentUser.role === 'admin' || currentUser.username === 'stackhard@stackhard.com';
+    if (isAdmin) {
       rows += `
       <tr style="cursor:pointer; background:var(--bg2)" onclick="toggleDomain('${domainId}')">
         <td colspan="7">
@@ -1084,7 +1086,7 @@ function buildEmpleados() {
       const commissionAmt = totalSalesAmount * (commissionPct / 100);
 
       const totalToPay = baseSalary + commissionAmt;
-      const rowStyle = (currentUser.role === 'admin') ? `display:none;` : ``;
+      const rowStyle = isAdmin ? `display:none;` : ``;
 
       rows += `
       <tr class="domain-group-${domainId}" style="${rowStyle}">
@@ -1194,7 +1196,7 @@ function bindEmpleados() {
 }
 
 function openNuevoEmpleado() {
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = currentUser.role === 'admin' || currentUser.username === 'stackhard@stackhard.com';
   const currentDomain = isAdmin ? '' : currentUser.username.split('@')[1];
   
   let html = `
@@ -1261,7 +1263,7 @@ function openNuevoEmpleado() {
 }
 
 function saveNuevoEmpleado() {
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = currentUser.role === 'admin' || currentUser.username === 'stackhard@stackhard.com';
   const name = el('emp-name').value.trim();
   let username = el('emp-user').value.trim();
   const password = el('emp-pass').value.trim();
