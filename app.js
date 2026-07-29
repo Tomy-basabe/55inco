@@ -163,7 +163,7 @@ function makeSearchableSelect(selectId, onChangeCb) {
 
 // ─── Modal ────────────────────────────────────────────────
 function openModal(title, bodyHtml, footerHtml = '') {
-  el('modal-title').textContent = title;
+  el('modal-title').innerHTML = title;
   el('modal-body').innerHTML = bodyHtml;
   el('modal-footer').innerHTML = footerHtml;
   el('modal-overlay').style.display = 'flex';
@@ -1161,6 +1161,12 @@ function openNuevoEmpleado() {
       </div>
     </div>
     <div class="form-group"><label>Contraseña</label><input id="emp-pass" type="password" placeholder="••••••"/></div>
+    <div class="form-group"><label>Rol</label>
+      <select id="emp-role" class="form-control">
+        <option value="cajero">Cajero/a</option>
+        <option value="jefe">Jefe/a</option>
+      </select>
+    </div>
     <div class="form-row cols-2">
       <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
       <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="3.5"/></div>
@@ -1193,7 +1199,8 @@ function saveNuevoEmpleado() {
 
   const users = DB.getUsers();
   if (users.find(u=>u.username.toLowerCase()===username.toLowerCase())) { toast('Ya existe ese usuario.','error'); return; }
-  const newUser = { id: DB.id(), name, username, password, role: 'cajero', salaryHour, defaultHours, commissionPct };
+  const role = el('emp-role') ? el('emp-role').value : 'cajero';
+  const newUser = { id: DB.id(), name, username, password, role, salaryHour, defaultHours, commissionPct };
   users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${escapeHTML(name)}"`);
   closeModal(); toast('Empleado creado.','success');
   renderView('view-empleados');
