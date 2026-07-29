@@ -2780,8 +2780,8 @@ function confirmSale() {
   // Calculate dynamic change
   const currentSum = cashAmt + cardAmt + debtAmt;
   let change = 0;
-  if (currentSum > baseTotal) {
-    const leftToPayWithCash = baseTotal - (cardAmt + debtAmt);
+  if (currentSum > totalFinal) {
+    const leftToPayWithCash = totalFinal - (cardAmt + debtAmt);
     if (leftToPayWithCash >= 0) {
       change = cashAmt - leftToPayWithCash;
     } else {
@@ -2791,13 +2791,34 @@ function confirmSale() {
 
   const finalCardAmtWithSurcharge = cardAmt + cardSurchargeAmt;
 
+  // Determine if it's really multi-payment
+  let activeMethodsCount = 0;
+  if (cashAmt > 0) activeMethodsCount++;
+  if (cardAmt > 0) activeMethodsCount++;
+  if (debtAmt > 0) activeMethodsCount++;
+  
+  const isMulti = activeMethodsCount > 1 ? 1 : 0;
+  
+  if (!isMulti) {
+    if (cardAmt > 0) salePayType = 'debito';
+    else if (debtAmt > 0) salePayType = 'deudor';
+    else salePayType = 'efectivo';
+  }
+
   // Show confirm modal
-  let methodBadge = `
-    <div style="font-size:12px;color:var(--text-2);text-align:right;">
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: ${fmt(cashAmt)}<br/>
-      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: ${fmt(finalCardAmtWithSurcharge)} ${applyCardSurcharge ? `(con recargo ${cardSurchargePct}%)` : ''}<br/>
-      ${debtAmt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor (${escapeHTML(debtorName)}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
+  let methodBadge = '';
+  if (isMulti) {
+    methodBadge = `
+      <div style="font-size:12px;color:var(--text-2);text-align:right;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2z M12 16c2.2 0 4-1.8 4-4s-1.8-4-4-4-4 1.8-4 4 1.8 4 4 4z"/></svg> Efectivo: ${fmt(cashAmt)}<br/>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M1 4h22v16H1z M1 10h22"/></svg> Tarjeta: ${fmt(finalCardAmtWithSurcharge)} ${applyCardSurcharge ? `(con recargo ${cardSurchargePct}%)` : ''}<br/>
+        ${debtAmt > 0 ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8"/></svg> Deudor (${escapeHTML(debtorName)}): ${fmt(finalDebtAmt)} ${surcharge > 0 ? `(con recargo ${surcharge}%)` : ''}<br/>` : ''}
+      </div>`;
+  } else {
+    methodBadge = `<div style="font-size:12px;color:var(--text-2);text-align:right;">
+      <strong>${salePayType.toUpperCase()}</strong>: ${fmt(totalFinal)}
     </div>`;
+  }
 
   let directCashHtml = '';
   if (change > 0) {
@@ -2826,7 +2847,7 @@ function confirmSale() {
     </div>
   `, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-success" onclick="finalizeSale(${totalFinal},${sub},${discAmt},${disc},${surcharge},1,${cashAmt},${finalCardAmtWithSurcharge},${finalDebtAmt})"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar</button>
+    <button class="btn btn-success" onclick="finalizeSale(${totalFinal},${sub},${discAmt},${disc},${surcharge},${isMulti},${cashAmt},${finalCardAmtWithSurcharge},${finalDebtAmt})"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> Confirmar</button>
   `);
 }
 
