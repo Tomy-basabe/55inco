@@ -43,6 +43,9 @@ function showPage(id) {
   el(id).classList.add('active');
   if (id === 'page-login') {
     window.location.hash = 'login';
+    if (el('mobile-logout-btn')) el('mobile-logout-btn').style.display = 'none';
+  } else {
+    if (el('mobile-logout-btn')) el('mobile-logout-btn').style.display = '';
   }
 }
 function showView(id, pushHash = true) {
