@@ -1194,42 +1194,90 @@ function bindEmpleados() {
 }
 
 function openNuevoEmpleado() {
-  const currentDomain = currentUser.username.split('@')[1];
-  openModal('Nuevo Empleado', `
+  const isAdmin = currentUser.role === 'admin';
+  const currentDomain = isAdmin ? '' : currentUser.username.split('@')[1];
+  
+  let html = `
     <div class="form-group"><label>Nombre completo</label><input id="emp-name" type="text" placeholder="Nombre apellido"/></div>
-    <div class="form-group"><label>Correo (Usuario)</label>
-      <div style="display:flex; align-items:center;">
-        <input id="emp-user" type="text" placeholder="nombre" style="flex:1; border-top-right-radius:0; border-bottom-right-radius:0;"/>
-        <div style="padding: 12px; background: var(--bg2); border: 1px solid var(--border); border-left: none; border-top-right-radius: 8px; border-bottom-right-radius: 8px; font-size: 13px; color: var(--text-2);">@${currentDomain}</div>
+    <div class="form-group"><label>Teléfono</label><input id="emp-phone" type="text" placeholder="Ej: +54 9 11 1234-5678"/></div>
+  `;
+
+  if (isAdmin) {
+    html += `
+      <div class="form-group"><label>Nombre del lugar / Local</label>
+        <input id="emp-local" type="text" placeholder="Ej: 5inco" oninput="
+          const val = this.value.toLowerCase().replace(/[^a-z0-9]/g, '');
+          document.getElementById('emp-domain-addon').textContent = val ? '@' + val + '.com' : '@...';
+        "/>
       </div>
-    </div>
+      <div class="form-group"><label>Correo (Usuario)</label>
+        <div style="display:flex; align-items:center;">
+          <input id="emp-user" type="text" placeholder="nombre" style="flex:1; border-top-right-radius:0; border-bottom-right-radius:0;"/>
+          <div id="emp-domain-addon" style="padding: 12px; background: var(--bg2); border: 1px solid var(--border); border-left: none; border-top-right-radius: 8px; border-bottom-right-radius: 8px; font-size: 13px; color: var(--text-2);">@...</div>
+        </div>
+      </div>
+      <div class="form-group"><label>Rol</label>
+        <select id="emp-role" class="form-control" onchange="
+          const isJefe = this.value === 'jefe';
+          document.getElementById('emp-conditions').style.display = isJefe ? 'none' : 'block';
+        ">
+          <option value="jefe">Jefe/a</option>
+          <option value="cajero">Cajero/a</option>
+        </select>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="form-group"><label>Correo (Usuario)</label>
+        <div style="display:flex; align-items:center;">
+          <input id="emp-user" type="text" placeholder="nombre" style="flex:1; border-top-right-radius:0; border-bottom-right-radius:0;"/>
+          <div style="padding: 12px; background: var(--bg2); border: 1px solid var(--border); border-left: none; border-top-right-radius: 8px; border-bottom-right-radius: 8px; font-size: 13px; color: var(--text-2);">@${currentDomain}</div>
+        </div>
+      </div>
+      <div class="form-group" style="display:none"><label>Rol</label>
+        <select id="emp-role" class="form-control">
+          <option value="cajero" selected>Cajero/a</option>
+        </select>
+      </div>
+    `;
+  }
+
+  html += `
     <div class="form-group"><label>Contraseña</label><input id="emp-pass" type="password" placeholder="••••••"/></div>
-    <div class="form-group"><label>Rol</label>
-      <select id="emp-role" class="form-control">
-        <option value="cajero">Cajero/a</option>
-        <option value="jefe">Jefe/a</option>
-      </select>
+    
+    <div id="emp-conditions" style="${isAdmin ? 'display:none;' : 'display:block;'}">
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
+        <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="3.5"/></div>
+      </div>
+      <div class="form-group"><label>Comisión por ventas (%)</label><input id="emp-comm" type="number" step="0.1" placeholder="Ej: 5"/></div>
     </div>
-    <div class="form-row cols-2">
-      <div class="form-group"><label>Sueldo por hora ($)</label><input id="emp-salary" type="number" placeholder="0"/></div>
-      <div class="form-group"><label>Horas por día</label><input id="emp-hours" type="number" placeholder="3.5"/></div>
-    </div>
-    <div class="form-group"><label>Comisión por ventas (%)</label><input id="emp-comm" type="number" step="0.1" placeholder="Ej: 5"/></div>
-  `, `
+  `;
+
+  openModal('Nuevo Empleado', html, `
     <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
     <button class="btn btn-primary" onclick="saveNuevoEmpleado()">Guardar</button>
   `);
 }
 
 function saveNuevoEmpleado() {
+  const isAdmin = currentUser.role === 'admin';
   const name = el('emp-name').value.trim();
   let username = el('emp-user').value.trim();
   const password = el('emp-pass').value.trim();
-  const salaryHour = parseFloat(el('emp-salary').value)||0;
-  const defaultHours = parseFloat(el('emp-hours').value)||3.5;
-  const commissionPct = parseFloat(el('emp-comm').value)||0;
+  const phone = el('emp-phone') ? el('emp-phone').value.trim() : '';
   
-  const currentDomain = currentUser.username.split('@')[1];
+  let role = el('emp-role') ? el('emp-role').value : 'cajero';
+  
+  let currentDomain = '';
+  if (isAdmin) {
+    const localVal = el('emp-local').value.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!localVal) { toast('Ingresá el nombre del local', 'error'); return; }
+    currentDomain = localVal + '.com';
+  } else {
+    currentDomain = currentUser.username.split('@')[1];
+  }
+
   if (username && !username.includes('@')) {
     username = username + '@' + currentDomain;
   }
@@ -1242,8 +1290,12 @@ function saveNuevoEmpleado() {
 
   const users = DB.getUsers();
   if (users.find(u=>u.username.toLowerCase()===username.toLowerCase())) { toast('Ya existe ese usuario.','error'); return; }
-  const role = el('emp-role') ? el('emp-role').value : 'cajero';
-  const newUser = { id: DB.id(), name, username, password, role, salaryHour, defaultHours, commissionPct };
+  
+  const salaryHour = role === 'jefe' ? 0 : (parseFloat(el('emp-salary').value)||0);
+  const defaultHours = role === 'jefe' ? 0 : (parseFloat(el('emp-hours').value)||3.5);
+  const commissionPct = role === 'jefe' ? 0 : (parseFloat(el('emp-comm').value)||0);
+  
+  const newUser = { id: DB.id(), name, username, password, role, phone, salaryHour, defaultHours, commissionPct };
   users.push(newUser); DB.saveUsersWithAudit(users, `Empleado creado: "${escapeHTML(name)}"`);
   closeModal(); toast('Empleado creado.','success');
   renderView('view-empleados');
