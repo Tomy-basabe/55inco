@@ -1807,7 +1807,7 @@ function buildStock() {
       ${cats.map(c=>`<div class="cat-filter" data-cat="${c.id}">${escapeHTML(c.name)}</div>`).join('')}
     </div>`;
 
-  const isAdmin = DB.getUser().role === 'jefe';
+  const isAdmin = currentUser.role === 'jefe';
   const rows = prods.map(p => {
     const vars = getVariants(p);
     const totalStock = getTotalStock(p);
@@ -1886,7 +1886,7 @@ window.calcMarginFromPrice = function(el) {
 };
 
 function variantRowHtml(idx, label, price, stock, cost = 0) {
-  const isAdmin = DB.getUser().role === 'jefe';
+  const isAdmin = currentUser.role === 'jefe';
   const margin = (price && cost) ? Math.round(((price - cost) / cost) * 100) : 0;
   return `
   <div class="variant-row" data-idx="${idx}" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; align-items:flex-end;">
