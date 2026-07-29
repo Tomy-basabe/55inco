@@ -41,6 +41,9 @@ function escapeHTML(str) {
 function showPage(id) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   el(id).classList.add('active');
+  if (id === 'page-login') {
+    window.location.hash = 'login';
+  }
 }
 function showView(id, pushHash = true) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -434,7 +437,6 @@ function handleLogout() {
   if (loginEmail) loginEmail.value = '';
   if (loginPass) loginPass.value = '';
   showPage('page-login');
-  window.location.hash = '';
   toast('Sesión cerrada correctamente', 'info');
 }
 
