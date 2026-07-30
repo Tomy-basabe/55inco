@@ -1,0 +1,465 @@
+StackHard Sistema Ropa -- Descripción completa del sistema
+
+══════════════════════════════════════════════════════════════
+  QUÉ ES ESTE SISTEMA
+══════════════════════════════════════════════════════════════
+
+StackHard Sistema Ropa es una aplicación web completa para la gestión
+de un local de ropa. Es un sistema todo-en-uno que cubre desde la
+venta de prendas hasta la administración de stock, empleados, deudores
+y finanzas del negocio. Está diseñado para funcionar tanto en computadora
+de escritorio como en dispositivos móviles, usando una interfaz moderna
+con tema oscuro/claro.
+
+El sistema se conecta a Supabase como backend (base de datos en la nube)
+pero también funciona en modo local con localStorage si no hay conexión
+a internet, gracias a un sistema de migración automática.
+
+══════════════════════════════════════════════════════════════
+  ROLES DE USUARIO
+══════════════════════════════════════════════════════════════
+
+El sistema tiene dos roles:
+
+1. ADMINISTRADOR (Jefe) -- Tiene acceso a absolutamente todas las funciones:
+   - Dashboard con estadísticas generales
+   - Gestión de empleados (altas, bajas, edición)
+   - Gestión de categorías de productos
+   - Historial completo con auditoría del sistema
+   - Gestión de stock completo con filtros por categoría
+   - Gastos y caja (administración financiera completa)
+   - Historial Completo (revisión de todas las acciones del sistema)
+   - Mis Ganancias (vista personal de ganancias)
+   - Venta y cierre de caja
+   - Lista de deudores
+
+2. VENDEDOR (Empleado/Cajero) -- Tiene acceso limitado a:
+   - Venta de productos (punto de venta)
+   - Historial de ventas propias
+   - Lista de deudores
+   - Gastos y caja (solo sus propios movimientos de caja)
+   - Stock (solo consulta)
+   - Mis Ganancias (ver sus propias ganancias)
+   - NO puede acceder a: gestión de empleados, categorías, historial
+     administrativo ni configuración del sistema.
+
+══════════════════════════════════════════════════════════════
+  PANTALLA DE LOGIN
+══════════════════════════════════════════════════════════════
+
+La pantalla de inicio muestra:
+- Logo de la marca "StackHard"
+- Campo para ingresar el correo electrónico
+- Campo para la contraseña
+- Botón de "Ingresar al Sistema" con flecha
+- Mensaje de error si las credenciales son incorrectas
+- Al presionar Enter se envía el formulario automáticamente
+
+══════════════════════════════════════════════════════════════
+  BARRA LATERAL (ESCRITORIO)
+══════════════════════════════════════════════════════════════
+
+La barra lateral izquierda muestra:
+- Logo de StackHard en la parte superior
+- Nombre del usuario y su rol (Administrador o Vendedor)
+- Un badge de color indicando el rol
+
+Sección "Principal" (solo para jefes):
+- Dashboard: Vista general con estadísticas del día y del período
+
+Sección "Gestión" (solo para jefes):
+- Empleados: Lista de todos los empleados con sus datos, horas trabajadas,
+  ventas realizadas y sueldo a pagar. Se pueden agregar, editar y eliminar
+  empleados.
+- Stock: Inventario completo de todas las prendas con stock, costos,
+  precios y márgenes. Se pueden filtrar por categoría, agregar, editar
+  y eliminar productos.
+- Categorías: Gestión de las categorías de productos (ej: "Remeras",
+  "Pantalones", "Zapatillas"). Se pueden crear, editar y eliminar.
+- Gastos y Caja: Todos los gastos del negocio, caja diaria, plantillas
+  de gastos fijos, y cierre de caja.
+
+Sección "Reportes" (solo para jefes):
+- Historial Completo: Registro de absolutamente todas las acciones en el
+  sistema con filtros por fecha, usuario, tipo de acción y búsqueda de
+  texto. Muestra un resumen de la cantidad de registros.
+
+Sección "Ventas":
+- Nueva Venta: Punto de venta interactivo donde se pueden escanear o
+  buscar productos por categoría, agregar al carrito, aplicar descuentos
+  y registros como efectivo, débito, crédito o pago con deuda del cliente.
+- Historial: Lista de todas las ventas con filtros por fecha, método de
+  pago, búsqueda de texto y ordenamiento. Se pueden exportar a CSV.
+
+Sección "Deudores":
+- Lista de Deudores: Clientes que deben dinero. Se pueden agregar, editar,
+  abonar pagos, sumar deuda y eliminar. Filtros por búsqueda y estado
+  (con deuda sin deuda).
+
+══════════════════════════════════════════════════════════════
+  NAVEGACIÓN INFERIOR MÓVIL (BOTTOM NAV)
+══════════════════════════════════════════════════════════════
+
+En dispositivos móviles, la navegación se muestra en una barra inferior
+con botones grandes táctiles:
+
+Para Administradores (Jefes):
+- Inicio (Dashboard)
+- Vender (Punto de venta)
+- Historial
+- Deudores
+- Stock
+- Empleados
+- Categorías
+- Gastos y Caja
+- Mis Ganancias
+- Historial Completo (Reportes)
+- Salir (Cerrar sesión)
+
+Para Vendedores (Empleados):
+- Vender (Punto de venta)
+- Historial
+- Deudores
+- Caja
+- Ganancias (Mis Ganancias)
+- Stock
+- Salir (Cerrar sesión)
+
+══════════════════════════════════════════════════════════════
+  VISTA: DASHBOARD (INICIO) -- Solo para jefes
+══════════════════════════════════════════════════════════════
+
+El Dashboard muestra un resumen general del negocio con filtros de fecha:
+
+- Período de fecha configurable (por defecto muestra la semana actual)
+- Total vendido en el período (solo ventas, sin devoluciones)
+- Ventas en efectivo del período
+- Ventas con tarjeta (débito) del período
+- Ventas con deuda del período
+- Ventas de hoy (total y por tipo de pago)
+- Gastos de hoy y gastos del período
+- Ganancia neta del período (total vendido menos gastos)
+- Prendas con stock bajo (menos de 3 unidades), con alerta visual
+- Total de la deuda pendiente de todos los deudores
+- Gráfico de ventas diarias (por días de la semana) usando Chart.js
+- Resumen de productos: cantidad total de productos, categorías y
+  stock actual
+
+══════════════════════════════════════════════════════════════
+  VISTA: NUEVA VENTA (Punto de Venta)
+══════════════════════════════════════════════════════════════
+
+El punto de venta es la pantalla principal para registrar compras:
+
+- Barra de búsqueda para encontrar productos rápidamente por nombre
+- Filtros por categoría (todas las categorías disponibles como tabs)
+- Cuadrícula de productos que muestra:
+  - Nombre de la prenda
+  - Variante (talle, color, etc.)
+  - Stock disponible
+  - Precio de venta
+  - Margen de ganancia calculado
+  - Costo de la prenda
+  - Badge rojo/amarillo/verde según nivel de stock
+  - Botón de editar producto directamente desde la venta
+- Al hacer clic en un producto se agrega al carrito de compras
+- El carrito muestra todos los items seleccionados con cantidad y subtotal
+- Opciones de pago mediante botones:
+  - Efectivo
+  - Débito (tarjeta)
+  - Crédito (pago con deuda del cliente)
+  - Multi (pago mixto, efectivo + tarjeta, con desglose)
+- Campo para seleccionar el cliente/deudor (opcional)
+- Campo para aplicar descuento
+- Campo para abonar (pago parcial de deuda)
+- Campo para seleccionar el empleado vendedor
+- Botón de facturar que registra la venta y la guarda en la base de datos
+- Al facturar se genera el comprobante con todos los detalles
+- El sistema actualiza automáticamente el stock de las prendas vendidas
+- Si se cierra la sesión y vuelve, el sistema recuerda la venta en curso
+- Se pueden eliminar items individuales del carrito antes de facturar
+- Sistema de categorías con opción de eliminar categorías directamente
+  desde el filtro de la venta
+
+══════════════════════════════════════════════════════════════
+  VISTA: HISTORIAL DE VENTAS
+══════════════════════════════════════════════════════════════
+
+Muestra el historial completo de todas las ventas con:
+
+- Filtros de fecha (desde / hasta)
+- Filtro por método de pago (efectivo, débito, crédito, multi/deuda)
+- Búsqueda de texto libre (por nombre de producto o cliente)
+- Ordenamiento por fecha (más recientes primero) o por monto
+- Tabla con columnas: Fecha, Hora, Productos, Cliente, Método de Pago,
+  Total y Estado (devuelta o no)
+- Exportación a CSV con un botón de descarga
+- Indicador visual para ventas con deuda
+- Integración con deudores: las ventas registradas como "crédito" se
+  vinculan automáticamente al deudor correspondiente
+- Se muestran también las deudas manuales (dinero que un cliente debe
+  sin que haya una venta asociada, registradas aparte)
+- Las filas de deudas manuales se muestran con un indicador diferente
+  en el historial
+
+══════════════════════════════════════════════════════════════
+  VISTA: DEUDORES
+══════════════════════════════════════════════════════════════
+
+Gestión completa de los deudores del negocio (personas que deben dinero):
+
+- Búsqueda por nombre del deudor
+- Filtros por estado:
+  - Todos (mostrar todos los deudores)
+  - Con deuda (solo los que deben dinero actualmente)
+  - Sin deuda (solo los que no deben)
+- Ordenamiento por nombre (A-Z o Z-A)
+- Tabla que muestra para cada deudor:
+  - Nombre del cliente
+  - Saldo pendiente (cuánto debe)
+  - Cantidad de deudas pendientes (cuántos movimientos de deuda tiene)
+  - Última actividad (fecha del último movimiento)
+  - Fecha de creación
+- Botón para abonar (pagar parte de la deuda) o sumar deuda
+  (agregar un nuevo crédito a este deudor)
+- Botón para editar los datos del deudor
+- Botón para eliminar un deudor (con confirmación)
+- Exportación de la lista a CSV
+- Al abonar una deuda, el sistema registra el pago con fecha actual
+- Se pueden agregar múltiples deudas para el mismo cliente
+- El cálculo del saldo es automático: suma de todas las deudas menos
+  todos los pagos realizados
+
+══════════════════════════════════════════════════════════════
+  VISTA: GASTOS Y CAJA
+══════════════════════════════════════════════════════════════
+
+Administración financiera completa del negocio:
+
+RESUMEN DEL DÍA:
+- Caja de hoy: muestra el total recaudado en efectivo, en tarjeta y
+  el mixto de ambos para el día actual
+- Ganancia del día: diferencia entre lo recaudado y los gastos del día
+- Ventas del día desglosadas por tipo de pago (efectivo, débito, deuda)
+
+SECCIÓN: GASTOS REGISTRADOS
+- Lista de todos los gastos con fecha, concepto, monto y tipo
+  (caja: gastos de la caja del negocio, fijo: gastos recurrentes)
+- Filtro por fecha (desde/hasta)
+- Exportación a CSV
+- Botón para registrar un nuevo gasto:
+  - Concepto (ej: "Artículos de limpieza", "Alquiler")
+  - Monto en pesos
+  - Tipo de gasto (caja o gasto fijo)
+- Botón para eliminar gastos (solo disponible para administradores)
+
+SECCIÓN: GASTOS FIJOS / PLANTILLAS
+- Configuración de servicios fijos recurrentes (ej: alquiler, luz, internet)
+- Para cada servicio fijo se puede:
+  - Configurar el nombre y monto estándar mensual
+  - Marcar como pagado cuando se realice el pago
+  - Editar el monto real pagado
+  - Eliminar la plantilla
+- Visualización del estado de pago de cada servicio (pendiente/pagado)
+- Historial de pagos de cada servicio fijo
+
+SECCIÓN: CIERRE DE CAJA
+- Cierre de la caja del día para el usuario actual (cajero)
+- Permite registrar el monto de cierre de la caja
+- Registra que el cajero abrió y cerró la caja con fecha y hora
+- Solo los cajeros pueden abrir/cerrar su propia caja; los jefes pueden
+  ver los cierres de todos los cajeros
+
+══════════════════════════════════════════════════════════════
+  VISTA: MIS GANANCIAS (Personal)
+══════════════════════════════════════════════════════════════
+
+Vista personalizada para cada usuario que muestra sus propias ganancias:
+
+- Rango de fechas configurable (por defecto muestra la semana actual)
+- Total de horas trabajadas en el período (se suman las horas de cada día)
+- Tarifa horaria configurationada en el perfil del usuario
+- Sueldo base calculado: horas × tarifa horaria
+- Total de ventas generadas por el usuario en el período
+- Comisión calculada como porcentaje de las ventas
+- Total a cobrar: sueldo base + comisión
+- Las horas se registran automáticamente al cerrar una sesión
+- Si es el primer día, el sistema asigna las horas por defecto
+  configuradas para el usuario
+
+══════════════════════════════════════════════════════════════
+  VISTA: EMPLEADOS (Solo para jefes)
+══════════════════════════════════════════════════════════════
+
+Gestión completa del personal:
+
+- Lista de todos los empleados del negocio
+- Filtro por período de fecha
+- Para cada empleado se muestra:
+  - Nombre y apellido
+  - Rol (Administrador o Vendedor)
+  - Horas trabajadas (suma del período)
+  - Ventas totales realizadas (monto)
+  - Comisión generada
+  - Sueldo a pagar (base + comisión)
+  - Tarifa horaria configurada
+- Botón para agregar un nuevo empleado:
+  - Nombre completo
+  - Correo electrónico (usado como usuario)
+  - Contraseña
+  - Rol (Administrador / Vendedor)
+  - Tarifa horaria
+  - Horas por defecto por día
+- Botón para editar datos del empleado
+- Botón para eliminar empleado (con confirmación)
+- Solo se ven los empleados del mismo dominio de correo (ej: @stackhard.com)
+  salvo que el usuario actual sea un administrador global
+- La vista se actualiza automáticamente al cambiar las fechas del filtro
+
+══════════════════════════════════════════════════════════════
+  VISTA: CATEGORÍAS (Solo para jefes)
+══════════════════════════════════════════════════════════════
+
+Gestión de las categorías de productos:
+
+- Lista de todas las categorías existentes
+- Para cada categoría se muestra:
+  - Nombre de la categoría
+  - Cantidad de productos que pertenecen a esa categoría
+  - Botón para editar el nombre
+  - Botón para eliminar la categoría
+- Formulario para crear una nueva categoría:
+  - Campo de texto para el nombre (ej: "Remeras", "Pantalones")
+  - Botón de guardar
+- Validación: no se pueden crear categorías sin nombre
+- Al eliminar una categoría se muestra un mensaje de éxito
+- Las categorías se pueden usar como filtro tanto en la vista de
+  Stock como en la vista de Venta
+
+══════════════════════════════════════════════════════════════
+  VISTA: STOCK / INVENTARIO (Solo para jefes)
+══════════════════════════════════════════════════════════════
+
+Gestión completa del inventario de prendas:
+
+- Filtros por categoría (tabs con todas las categorías disponibles + "Todas")
+- Cuadrícula de productos con:
+  - Nombre de cada prenda
+  - Categoría a la que pertenece
+  - Variantes disponibles (talles, colores, etc.) si tiene múltiples
+  - Stock total (suma de todas las variantes)
+  - Stock de cada variante individualmente
+  - Costo de la prenda
+  - Precio de venta
+  - Margen de ganancia calculado automáticamente (porcentaje)
+  - Badge de color según nivel de stock:
+    - Verde: stock suficiente (>5)
+    - Amarillo: stock bajo (3-5)
+    - Rojo: stock crítico (≤2)
+  - Botón de editar producto directamente desde el stock
+- Botón para agregar un nuevo producto al inventario
+- Exportación del inventario completo a CSV (solo para administradores)
+- Las categorías se pueden actualizar desde la vista de stock
+- Si una categoría tiene productos asociados no se puede eliminar
+
+══════════════════════════════════════════════════════════════
+  VISTA: HISTORIAL COMPLETO / AUDITORÍA (Solo para jefes)
+══════════════════════════════════════════════════════════════
+
+Registro de absolutamente todas las acciones realizadas en el sistema:
+
+- Filtros avanzados:
+  - Desde / Hasta (rango de fechas)
+  - Usuario (dropdown con todos los usuarios del sistema)
+  - Tipo de acción (dropdown con todos los tipos de acciones registradas)
+  - Buscar texto libre (busca en la descripción de la acción)
+- Resumen: muestra cuántos registros se están mostrando
+- Tabla con columnas:
+  - Fecha / Hora del evento
+  - Usuario que realizó la acción
+  - Tipo de acción (icono + etiqueta descriptiva)
+  - Descripción detallada de lo que sucedió
+- Tipos de acciones registradas:
+  - Login / Logout de usuarios
+  - Creación, edición y eliminación de productos
+  - Creación, edición y eliminación de categorías
+  - Creación, edición y eliminación de empleados
+  - Registro de ventas y devoluciones
+  - Registro de gastos
+  - Cierre de caja
+  - Gestión de deudas y deudores
+  - Cambios de configuración
+- Exportación de toda la auditoría a CSV
+
+══════════════════════════════════════════════════════════════
+  FUNCIONES ADICIONALES DEL SISTEMA
+══════════════════════════════════════════════════════════════
+
+TEMA CLARO/OSCURO:
+- Botón en la esquina superior derecha para alternar entre tema oscuro
+  y tema claro
+- La preferencia se guarda en localStorage y se mantiene entre sesiones
+
+APLICACIÓN PROGRESSIVA (PWA):
+- manifest.json configurado para instalar como app en dispositivos móviles
+- Service Worker (sw.js) para funcionamiento offline
+- Se registra automáticamente al cargar la aplicación
+- Meta tags para Apple Mobile Web App (compatible con iOS)
+
+MODO OFFLINE:
+- Si no hay conexión a Supabase, el sistema funciona con localStorage
+- Datos locales sincronizados cuando hay conexión
+- Sistema de migración automática de Supabase a localStorage
+
+RESPONSIVE DESIGN:
+- Se adapta automáticamente a escritorio y dispositivos móviles
+- En escritorio: barra lateral izquierda con navegación completa
+- En móvil: barra inferior táctil con iconos y la barra lateral se abre
+  como overlay al presionar el botón de menú (hamburguesa)
+- El nombre del usuario se muestra en el header móvil
+
+EXPORTACIÓN A CSV:
+- La mayoría de las tablas (ventas, gastos, stock, audit, deudores)
+  tienen botón de exportación a archivo CSV
+- Los archivos se descargan directamente al dispositivo
+- Los nombres de archivo incluyen la fecha y el tipo de reporte
+
+GENERACIÓN DE PDF:
+- El historial de ventas se puede exportar a PDF usando jsPDF
+- Las tablas se formatean automáticamente con AutoTable
+
+SISTEMA DE SESIONES DE CAJA:
+- Cada cajero abre su propia caja al comenzar el día
+- Registra el monto de apertura (por defecto 0)
+- Registra la fecha, hora y nombre del cajero que abrió
+- El cierre de caja registra el monto final
+
+SISTEMA DE HORAS TRABAJADAS:
+- Se registran las horas trabajadas por día para cada empleado
+- Por defecto se asignan las horas configuradas en el perfil del usuario
+- Las horas se pueden ver y gestionar en la vista de empleados (jefes)
+- Las ganancias se calculan en función de las horas y la tarifa horaria
+
+PLANTILLAS DE GASTOS FIJOS:
+- Permite configurar gastos recurrentes con monto estándar mensual
+- Cada mes se marca si el gasto fue pagado o está pendiente
+- Se pueden editar los montos reales pagados
+- Se pueden eliminar las plantillas
+
+SISTEMA DE AUDITORÍA COMPLETA:
+- Cada acción en el sistema queda registrada con:
+  - Timestamp exacto
+  - Usuario que la realizó
+  - Tipo de acción
+  - Descripción detallada
+- Los administradores pueden revisar absolutamente todo el historial
+- Filtros avanzados para encontrar acciones específicas
+
+SEGURIDAD:
+- Las vistas sensibles se protegen por rol en el frontend y backend
+- Si un usuario sin permisos intenta acceder a una vista bloqueada,
+  la navegación se bloquea
+- Las acciones destructivas (eliminar productos, empleados, gastos)
+  requieren confirmación explícita
+- Los cambios en gastos históricos están protegidos para usuarios
+  no administradores
