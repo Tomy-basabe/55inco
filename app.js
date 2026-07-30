@@ -702,7 +702,10 @@ function getMobileNavItems() {
     stock:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
     caja:      '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
     ganancias: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
-    logout:    '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
+    empleados:  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    categorias: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+    adminHist:  '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
+    logout:     '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
   };
   const items = [];
   if (jefe) {
@@ -712,11 +715,16 @@ function getMobileNavItems() {
   items.push({ view: 'view-historial',icon: MOBILE_ICONS.historial, label: 'Historial' });
   items.push({ view: 'view-deudores', icon: MOBILE_ICONS.deudores,  label: 'Deudores' });
   if (jefe) {
-    items.push({ view: 'view-stock', icon: MOBILE_ICONS.stock, label: 'Stock' });
+    items.push({ view: 'view-stock',        icon: MOBILE_ICONS.stock,       label: 'Stock' });
+    items.push({ view: 'view-empleados',    icon: MOBILE_ICONS.empleados,   label: 'Empleados' });
+    items.push({ view: 'view-categorias',   icon: MOBILE_ICONS.categorias,  label: 'Categorias' });
+    items.push({ view: 'view-gastos',       icon: MOBILE_ICONS.caja,        label: 'Gastos y Caja' });
+    items.push({ view: 'view-mis-ganancias', icon: MOBILE_ICONS.ganancias,   label: 'Mis Ganancias' });
+    items.push({ view: 'view-historico-admin', icon: MOBILE_ICONS.adminHist, label: 'Historial Completo' });
   } else {
-    items.push({ view: 'view-gastos',          icon: MOBILE_ICONS.caja,     label: 'Caja' });
-    items.push({ view: 'view-mis-ganancias',   icon: MOBILE_ICONS.ganancias, label: 'Ganancias' });
-    items.push({ view: 'view-stock',           icon: MOBILE_ICONS.stock,     label: 'Stock' });
+    items.push({ view: 'view-gastos',       icon: MOBILE_ICONS.caja,      label: 'Caja' });
+    items.push({ view: 'view-mis-ganancias', icon: MOBILE_ICONS.ganancias, label: 'Ganancias' });
+    items.push({ view: 'view-stock',        icon: MOBILE_ICONS.stock,     label: 'Stock' });
   }
   
   // Add logout button for all users
