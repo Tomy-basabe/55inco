@@ -77,13 +77,17 @@ const DB = {
   // ── REST helpers (bypass SDK - the publishable key works with REST but not the JS SDK JWT format) ──
   async _rest(method, table, body = null, query = '') {
     const url = `${this.SUPABASE_URL}/rest/v1/${table}${query}`;
+    let prefer = method === 'POST' ? 'return=minimal' : 'return=representation';
+    if (method === 'POST' && query.includes('on_conflict')) {
+      prefer = 'return=minimal,resolution=merge-duplicates';
+    }
     const opts = {
       method,
       headers: {
         'apikey': this.SUPABASE_KEY,
         'Authorization': `Bearer ${this.SUPABASE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': method === 'POST' ? 'return=minimal' : 'return=representation'
+        'Prefer': prefer
       }
     };
     if (body) opts.body = JSON.stringify(body);
