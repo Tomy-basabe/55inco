@@ -2720,11 +2720,36 @@ function saveQuickProductFromVenta() {
 
 function openEditProductFromVenta(productId) {
   openEditProduct(productId);
-  // Hook saveEditProduct to refresh the sales window upon complete
+  // Hook saveEditProduct to refresh the sales window and sync cart upon complete
   const origSave = window.saveEditProduct;
   window.saveEditProduct = function(id) {
     origSave.call(this, id);
+    // Sync cart entries for this product with updated prices/stock
+    const updatedProd = DB.getProducts().find(x => x.id === id);
+    if (updatedProd) {
+      const hasMulti = updatedProd.variants && updatedProd.variants.length > 1;
+      cart = cart.reduce((acc, item) => {
+        if (item.productId !== id) { acc.push(item); return acc; }
+        // Get the new variant data for this cart entry
+        let newPrice, newStock;
+        if (hasMulti && item.variantIdx !== undefined) {
+          const v = updatedProd.variants[item.variantIdx];
+          if (!v) return acc; // variant was removed, drop item
+          newPrice = v.price;
+          newStock = v.stock;
+        } else {
+          const v = getVariants(updatedProd);
+          newPrice = v[0].price;
+          newStock = v[0].stock;
+        }
+        const newQty = Math.min(item.qty, newStock);
+        if (newQty <= 0) return acc; // no more stock, remove from cart
+        acc.push({ ...item, customPrice: newPrice, qty: newQty });
+        return acc;
+      }, []);
+    }
     renderView('view-venta');
+    renderCartItems();
     window.saveEditProduct = origSave;
   };
 }
