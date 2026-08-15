@@ -2440,6 +2440,10 @@ function renderCartItems() {
     if (!p) return '';
     const ck = c.cartKey || c.productId;
     const maxStock = (c.variantIdx !== undefined && p.variants && p.variants[c.variantIdx]) ? p.variants[c.variantIdx].stock : (p.stock || 99);
+    const basePrice = c.customPrice !== undefined ? c.customPrice : p.price;
+    const itemDisc = c.itemDiscount || 0;
+    const effPrice = basePrice * (1 - itemDisc / 100);
+    const hasDisc = itemDisc > 0;
     return `
     <div class="cart-item">
       <div style="flex:1">
@@ -2453,9 +2457,14 @@ function renderCartItems() {
       </div>
       <div style="text-align:right">
         <div class="cart-item-price" style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-bottom:2px;">
-          $ <input type="number" class="input-sm" style="width:70px;text-align:right;padding:2px 4px;font-size:13px;" value="${c.customPrice !== undefined ? c.customPrice : p.price}" onchange="updateCartItemPrice('${ck}', this.value)">
+          $ <input type="number" class="input-sm" style="width:70px;text-align:right;padding:2px 4px;font-size:13px;" value="${basePrice}" onchange="updateCartItemPrice('${ck}', this.value)">
         </div>
-        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Sub: ${fmt((c.customPrice !== undefined ? c.customPrice : p.price)*c.qty)}</div>
+        <div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-bottom:4px;">
+          <span style="font-size:10px;color:var(--text-3);">Desc. %</span>
+          <input type="number" class="input-sm" min="0" max="100" style="width:48px;text-align:right;padding:2px 4px;font-size:12px;" value="${itemDisc}" onchange="updateCartItemDiscount('${ck}', this.value)" placeholder="0">
+        </div>
+        ${hasDisc ? `<div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:2px;">→ ${fmt(effPrice)} c/u</div>` : ''}
+        <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Sub: ${fmt(effPrice*c.qty)}</div>
         <button class="cart-item-remove" onclick="removeFromCart('${ck}')">×</button>
       </div>
     </div>`;
@@ -2496,13 +2505,24 @@ function updateCartItemPrice(cartKey, newPrice) {
   renderCartItems();
 }
 
+function updateCartItemDiscount(cartKey, newDisc) {
+  const item = cart.find(c => (c.cartKey || c.productId) === cartKey);
+  if (!item) return;
+  const parsed = parseFloat(newDisc);
+  item.itemDiscount = (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : 0;
+  renderCartItems();
+}
+
+function getEffectivePrice(item, prods) {
+  const p = prods.find(x => x.id === item.productId);
+  const base = item.customPrice !== undefined ? item.customPrice : (p ? p.price : 0);
+  const disc = item.itemDiscount || 0;
+  return base * (1 - disc / 100);
+}
+
 function updateCartTotals() {
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c) => {
-    const p = prods.find(x=>x.id===c.productId);
-    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
-    return a+(price*c.qty);
-  }, 0);
+  const sub = cart.reduce((a,c) => a + getEffectivePrice(c, prods) * c.qty, 0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   const discAmt = sub * (disc/100);
   const total = sub - discAmt;
@@ -2523,11 +2543,7 @@ function updateCartTotals() {
 
 function validateSplitAmounts() {
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c)=>{ 
-    const p=prods.find(x=>x.id===c.productId); 
-    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
-    return a+(price*c.qty); 
-  },0);
+  const sub = cart.reduce((a,c) => a + getEffectivePrice(c, prods) * c.qty, 0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   let baseTarget = sub - (sub * (disc/100));
 
@@ -2796,11 +2812,7 @@ function confirmSale() {
   }
 
   const prods = DB.getProducts();
-  const sub = cart.reduce((a,c)=>{ 
-    const p=prods.find(x=>x.id===c.productId); 
-    const price = c.customPrice !== undefined ? c.customPrice : (p?p.price:0);
-    return a+(price*c.qty); 
-  },0);
+  const sub = cart.reduce((a,c) => a + getEffectivePrice(c, prods) * c.qty, 0);
   const disc = parseFloat(el('cart-discount')?.value||0);
   const discAmt = sub*(disc/100);
   let baseTotal = sub - discAmt;
@@ -2835,8 +2847,9 @@ function confirmSale() {
 
   const items = cart.map(c => {
     const p = prods.find(x=>x.id===c.productId);
-    const price = c.customPrice !== undefined ? c.customPrice : (p?.price || 0);
-    return { productId: c.productId, name: p?.name, price: price, qty: c.qty, variantLabel: c.variantLabel || null, variantIdx: c.variantIdx !== undefined ? c.variantIdx : null };
+    const effPrice = getEffectivePrice(c, prods);
+    const itemDisc = c.itemDiscount || 0;
+    return { productId: c.productId, name: p?.name, price: effPrice, qty: c.qty, variantLabel: c.variantLabel || null, variantIdx: c.variantIdx !== undefined ? c.variantIdx : null, itemDiscount: itemDisc };
   });
 
   // Calculate dynamic change
@@ -2894,10 +2907,13 @@ function confirmSale() {
 
   openModal('Confirmar Venta', `
     <div style="margin-bottom:14px">
-      ${items.map(i=>`<div class="cart-total-row"><span>${i.name} x${i.qty}</span><span>${fmt(i.price*i.qty)}</span></div>`).join('')}
+      ${items.map(i=>{
+        const discBadge = i.itemDiscount > 0 ? ` <span class="badge badge-green" style="font-size:10px;">-${i.itemDiscount}%</span>` : '';
+        return `<div class="cart-total-row"><span>${escapeHTML(i.name||'')} x${i.qty}${discBadge}</span><span>${fmt(i.price*i.qty)}</span></div>`;
+      }).join('')}
     </div>
     <div class="cart-total-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
-    ${disc>0?`<div class="cart-total-row"><span>Descuento ${disc}%</span><span class="text-green">-${fmt(discAmt)}</span></div>`:''}
+    ${disc>0?`<div class="cart-total-row"><span>Descuento general ${disc}%</span><span class="text-green">-${fmt(discAmt)}</span></div>`:''}
     ${cardSurchargeAmt>0?`<div class="cart-total-row"><span>Recargo tarjeta ${cardSurchargePct}%</span><span class="text-yellow">+${fmt(cardSurchargeAmt)}</span></div>`:''}
     ${surcharge>0?`<div class="cart-total-row"><span>Recargo deudor ${surcharge}% (sobre parte fiada)</span><span class="text-yellow">+${fmt(totalFinal-baseTotal-cardSurchargeAmt)}</span></div>`:''}
     <div class="cart-total-row big"><span>TOTAL COBRADO</span><span class="text-accent">${fmt(totalFinal)}</span></div>
