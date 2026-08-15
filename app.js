@@ -2771,16 +2771,19 @@ function openEditProductFromVenta(productId) {
       // automatically add it now that it has stock
       const isInCartNow = cart.some(item => item.productId === id);
       if (!isInCartNow) {
-        // Find first variant with stock > 0
         if (hasMulti) {
-          const variantIdx = updatedProd.variants.findIndex(v => v.stock > 0);
-          if (variantIdx !== -1) {
-            const v = updatedProd.variants[variantIdx];
-            const cartKey = `${id}__v${variantIdx}`;
-            cart.push({ productId: id, cartKey, qty: 1, customPrice: v.price, variantIdx, variantLabel: v.label });
-            toast(`"${escapeHTML(updatedProd.name)}" (${v.label}) agregado al carrito.`, 'success');
+          // Multiple variants: show picker so user chooses the right one
+          const hasAnyStock = updatedProd.variants.some(v => v.stock > 0);
+          if (hasAnyStock) {
+            // Render view first, then open picker
+            renderView('view-venta');
+            renderCartItems();
+            window.saveEditProduct = origSave;
+            setTimeout(() => openVariantPicker(updatedProd), 150);
+            return; // early return, picker handles the rest
           }
         } else {
+          // Single variant: auto-add directly
           const v = getVariants(updatedProd);
           if (v[0].stock > 0) {
             cart.push({ productId: id, cartKey: id, qty: 1, customPrice: v[0].price, variantIdx: undefined, variantLabel: null });
