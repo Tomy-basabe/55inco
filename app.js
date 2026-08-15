@@ -2744,6 +2744,9 @@ function openEditProductFromVenta(productId) {
     const updatedProd = DB.getProducts().find(x => x.id === id);
     if (updatedProd) {
       const hasMulti = updatedProd.variants && updatedProd.variants.length > 1;
+      // Track whether product was in cart before sync
+      const wasInCart = cart.some(item => item.productId === id);
+
       cart = cart.reduce((acc, item) => {
         if (item.productId !== id) { acc.push(item); return acc; }
         // Get the new variant data for this cart entry
@@ -2763,12 +2766,35 @@ function openEditProductFromVenta(productId) {
         acc.push({ ...item, customPrice: newPrice, qty: newQty });
         return acc;
       }, []);
+
+      // If the product wasn't already in the cart (or had 0 stock before),
+      // automatically add it now that it has stock
+      const isInCartNow = cart.some(item => item.productId === id);
+      if (!isInCartNow) {
+        // Find first variant with stock > 0
+        if (hasMulti) {
+          const variantIdx = updatedProd.variants.findIndex(v => v.stock > 0);
+          if (variantIdx !== -1) {
+            const v = updatedProd.variants[variantIdx];
+            const cartKey = `${id}__v${variantIdx}`;
+            cart.push({ productId: id, cartKey, qty: 1, customPrice: v.price, variantIdx, variantLabel: v.label });
+            toast(`"${escapeHTML(updatedProd.name)}" (${v.label}) agregado al carrito.`, 'success');
+          }
+        } else {
+          const v = getVariants(updatedProd);
+          if (v[0].stock > 0) {
+            cart.push({ productId: id, cartKey: id, qty: 1, customPrice: v[0].price, variantIdx: undefined, variantLabel: null });
+            toast(`"${escapeHTML(updatedProd.name)}" agregado al carrito.`, 'success');
+          }
+        }
+      }
     }
     renderView('view-venta');
     renderCartItems();
     window.saveEditProduct = origSave;
   };
 }
+
 
 function openNewCatFromVenta() {
   openModal('Nueva Categoría', `
