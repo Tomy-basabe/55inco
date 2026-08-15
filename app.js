@@ -2738,65 +2738,79 @@ function openEditProductFromVenta(productId) {
   openEditProduct(productId);
   // Hook saveEditProduct to refresh the sales window and sync cart upon complete
   const origSave = window.saveEditProduct;
+
+  // Snapshot old stock BEFORE saving so we can compute the delta
+  const oldProd = DB.getProducts().find(x => x.id === productId);
+  const oldVariants = oldProd ? getVariants(oldProd).map(v => ({ stock: v.stock || 0 })) : [];
+
   window.saveEditProduct = function(id) {
     origSave.call(this, id);
-    // Sync cart entries for this product with updated prices/stock
     const updatedProd = DB.getProducts().find(x => x.id === id);
-    if (updatedProd) {
-      const hasMulti = updatedProd.variants && updatedProd.variants.length > 1;
-      // Track whether product was in cart before sync
-      const wasInCart = cart.some(item => item.productId === id);
+    if (!updatedProd) {
+      renderView('view-venta');
+      renderCartItems();
+      window.saveEditProduct = origSave;
+      return;
+    }
 
-      cart = cart.reduce((acc, item) => {
-        if (item.productId !== id) { acc.push(item); return acc; }
-        // Get the new variant data for this cart entry
-        let newPrice, newStock;
+    const hasMulti = updatedProd.variants && updatedProd.variants.length > 1;
+    const wasInCart = cart.some(item => item.productId === id);
+
+    if (wasInCart) {
+      // Product was in cart: sync price and add delta to qty
+      cart = cart.map(item => {
+        if (item.productId !== id) return item;
+        let newPrice, newStock, oldStock;
         if (hasMulti && item.variantIdx !== undefined) {
           const v = updatedProd.variants[item.variantIdx];
-          if (!v) return acc; // variant was removed, drop item
+          if (!v) return null; // variant removed → drop
           newPrice = v.price;
           newStock = v.stock;
+          oldStock = (oldVariants[item.variantIdx] || {}).stock || 0;
         } else {
           const v = getVariants(updatedProd);
           newPrice = v[0].price;
           newStock = v[0].stock;
+          oldStock = (oldVariants[0] || {}).stock || 0;
         }
-        const newQty = Math.min(item.qty, newStock);
-        if (newQty <= 0) return acc; // no more stock, remove from cart
-        acc.push({ ...item, customPrice: newPrice, qty: newQty });
-        return acc;
-      }, []);
+        const delta = Math.max(0, newStock - oldStock);
+        const newQty = Math.min(item.qty + delta, newStock);
+        if (newQty <= 0) return null;
+        if (delta > 0) toast(`+${delta} "${escapeHTML(updatedProd.name)}" agregados al carrito.`, 'success');
+        return { ...item, customPrice: newPrice, qty: newQty };
+      }).filter(Boolean);
 
-      // If the product wasn't already in the cart (or had 0 stock before),
-      // automatically add it now that it has stock
-      const isInCartNow = cart.some(item => item.productId === id);
-      if (!isInCartNow) {
-        if (hasMulti) {
-          // Multiple variants: show picker so user chooses the right one
-          const hasAnyStock = updatedProd.variants.some(v => v.stock > 0);
-          if (hasAnyStock) {
-            // Render view first, then open picker
-            renderView('view-venta');
-            renderCartItems();
-            window.saveEditProduct = origSave;
-            setTimeout(() => openVariantPicker(updatedProd), 150);
-            return; // early return, picker handles the rest
-          }
-        } else {
-          // Single variant: auto-add directly
-          const v = getVariants(updatedProd);
-          if (v[0].stock > 0) {
-            cart.push({ productId: id, cartKey: id, qty: 1, customPrice: v[0].price, variantIdx: undefined, variantLabel: null });
-            toast(`"${escapeHTML(updatedProd.name)}" agregado al carrito.`, 'success');
-          }
+    } else {
+      // Product was NOT in cart: add the delta of newly stocked units
+      if (hasMulti) {
+        // Multi-variant: open picker so user chooses which to add
+        const hasAnyStock = updatedProd.variants.some(v => v.stock > 0);
+        if (hasAnyStock) {
+          renderView('view-venta');
+          renderCartItems();
+          window.saveEditProduct = origSave;
+          setTimeout(() => openVariantPicker(updatedProd), 150);
+          return;
+        }
+      } else {
+        const v = getVariants(updatedProd);
+        const newStock = v[0].stock || 0;
+        const oldStock = (oldVariants[0] || {}).stock || 0;
+        const delta = Math.max(1, newStock - oldStock); // at least 1
+        if (newStock > 0) {
+          const qtyToAdd = Math.min(delta, newStock);
+          cart.push({ productId: id, cartKey: id, qty: qtyToAdd, customPrice: v[0].price, variantIdx: undefined, variantLabel: null });
+          toast(`"${escapeHTML(updatedProd.name)}" ×${qtyToAdd} agregado${qtyToAdd > 1 ? 's' : ''} al carrito.`, 'success');
         }
       }
     }
+
     renderView('view-venta');
     renderCartItems();
     window.saveEditProduct = origSave;
   };
 }
+
 
 
 function openNewCatFromVenta() {
