@@ -3419,7 +3419,17 @@ function processPartialReturn(saleId) {
     if (sale.payType === 'deudor' && sale.debtorId) {
       const debts = DB.getDebts();
       const sDebt = debts.find(d => d.saleId === saleId && !d.paid);
-      if (sDebt) DB.payDebt(sDebt.id);
+      if (sDebt) {
+        if (sDebt.amount <= sale.totalFinal) {
+          DB.payDebt(sDebt.id);
+        } else {
+          sDebt.amount -= sale.totalFinal;
+          DB.set(DB.KEYS.debts, debts);
+          if (DB.supabase) {
+            DB.enqueue('debt_update', 'debts', 'PATCH', { amount: sDebt.amount }, `?id=eq.${sDebt.id}`);
+          }
+        }
+      }
     }
     toast('Venta anulada totalmente y stock devuelto.','success');
   } else {
@@ -3434,6 +3444,23 @@ function processPartialReturn(saleId) {
     }
     
     const newTotalFinal = newBaseTotal + newSurcharge;
+
+    if (sale.payType === 'deudor' && sale.debtorId) {
+      const debts = DB.getDebts();
+      const sDebt = debts.find(d => d.saleId === saleId && !d.paid);
+      if (sDebt && sale.totalFinal > newTotalFinal) {
+        const returnedDiff = sale.totalFinal - newTotalFinal;
+        sDebt.amount = Math.max(0, sDebt.amount - returnedDiff);
+        if (sDebt.amount === 0) {
+          DB.payDebt(sDebt.id);
+        } else {
+          DB.set(DB.KEYS.debts, debts);
+          if (DB.supabase) {
+            DB.enqueue('debt_update', 'debts', 'PATCH', { amount: sDebt.amount }, `?id=eq.${sDebt.id}`);
+          }
+        }
+      }
+    }
 
     DB.updateSale(saleId, {
       items: newItems,
@@ -3987,7 +4014,9 @@ function openDebtorDetail(id) {
 
     let actionHtml = '';
     if (debt.paid) {
-      actionHtml = `<span style="font-size:11px;color:var(--text-3)">Cerrado: ${fmtDate(debt.paidDate)}</span>`;
+      actionHtml = `
+        <span style="font-size:11px;color:var(--text-3);margin-right:6px;">Cerrado: ${fmtDate(debt.paidDate)}</span>
+        <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;" onclick="unpayDebt('${debt.id}','${id}')" title="Reactivar movimiento"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px;"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8 M3 3v5h5"/></svg> Reactivar</button>`;
     } else {
       actionHtml = `<button class="btn btn-success btn-sm" onclick="payDebt('${debt.id}','${id}')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg> ${isAbono ? 'Archivar' : 'Pagado'}</button>`;
     }
@@ -4080,12 +4109,30 @@ function viewSaleTicket(saleId) {
 
 function payDebt(debtId, debtorId) {
   const debt = DB.getDebts().find(d => d.id === debtId);
+  if (!debt) return;
+  const isAbono = debt.amount < 0;
+  const msg = isAbono 
+    ? '¿Estás seguro de archivar este abono? Dejará de figurar en el saldo pendiente.'
+    : `¿Marcar como pagado este movimiento de ${fmt(debt.amount)}? Dejará de sumar al saldo pendiente.`;
+  if (!confirm(msg)) return;
+
   DB.payDebt(debtId);
-  if (debt && debt.amount < 0) {
-    toast('Abono archivado.','success');
-  } else {
-    toast('Deuda marcada como pagada.','success');
-  }
+  toast(isAbono ? 'Abono archivado.' : 'Deuda marcada como pagada.', 'success');
+  openDebtorDetail(debtorId);
+  renderView('view-deudores');
+}
+
+function unpayDebt(debtId, debtorId) {
+  const debt = DB.getDebts().find(d => d.id === debtId);
+  if (!debt) return;
+  const isAbono = debt.amount < 0;
+  const msg = isAbono 
+    ? '¿Reactivar este abono a favor del cliente? Volverá a descontar del saldo.'
+    : `¿Reactivar esta deuda de ${fmt(debt.amount)}? Volverá a sumar al saldo pendiente.`;
+  if (!confirm(msg)) return;
+
+  DB.unpayDebt(debtId);
+  toast('Movimiento reactivado correctamente.', 'success');
   openDebtorDetail(debtorId);
   renderView('view-deudores');
 }

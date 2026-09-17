@@ -873,6 +873,19 @@ const DB = {
       }, `?id=eq.${id}`);
     }
   },
+  unpayDebt(id) {
+    const debt = this.getDebts().find(d => d.id === id);
+    const debts = this.getDebts().map(d => d.id === id ? { ...d, paid: false, paidDate: null } : d);
+    this.set(this.KEYS.debts, debts);
+    const debtor = debt ? this.getDebtors().find(d => d.id === debt.debtorId) : null;
+    this.addAuditLog('debt_unpaid', `Deuda reactivada – ${debtor ? debtor.name : 'Deudor'} – $${debt ? debt.amount : '?'}`, { debtId: id, amount: debt?.amount, debtorName: debtor?.name });
+    if (this.supabase) {
+      this.enqueue('debt_unpay', 'debts', 'PATCH', {
+        paid: false,
+        paid_date: null
+      }, `?id=eq.${id}`);
+    }
+  },
   getDebtorBalance(debtorId) {
     return this.getDebts().filter(d => d.debtorId === debtorId && !d.paid)
       .reduce((sum, d) => sum + d.amount, 0);

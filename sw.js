@@ -1,4 +1,4 @@
-const CACHE_NAME = '5inco-store-v5';
+const CACHE_NAME = '5inco-store-v6';
 const urlsToCache = [
   './',
   './index.html',
