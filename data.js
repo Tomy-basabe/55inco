@@ -10,9 +10,15 @@ const DB = {
   isSynced: false,
   currentTenant: '5inco.com',
   KEYS: {},
+  QUEUE_KEY: '5inco_sync_queue',
+  isSyncingQueue: false,
+  isSyncingData: false,
+  onSyncStateChange: null,
+  onDataChange: null,
 
   init() {
-    this.buildKeys(); // Initialize KEYS with default tenant on startup
+    this.buildKeys();
+    this.migrateLegacyTenantStorage();
     // Clear any old/corrupted user cache so Supabase is always the source of truth
     const oldKeys = ['users', '5inco.com_users', 'global_users'];
     oldKeys.forEach(k => {
@@ -20,7 +26,6 @@ const DB = {
       if (data) {
         try {
           const parsed = JSON.parse(data);
-          // If users don't have emails, clear the cache so Supabase reloads
           if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].username && !parsed[0].username.includes('@')) {
             localStorage.removeItem(k);
             console.log('Cleared stale user cache:', k);
@@ -31,26 +36,54 @@ const DB = {
   },
 
   setTenant(email) {
-    if (!email || !email.includes('@')) return;
-    this.currentTenant = email.split('@')[1].toLowerCase();
+    // Standardize to 5inco.com so all users share the same store data
+    this.currentTenant = '5inco.com';
     this.buildKeys();
+    this.migrateLegacyTenantStorage();
+  },
+
+  migrateLegacyTenantStorage() {
+    try {
+      const legacyPrefix = 'stackhard.com_';
+      const targetPrefix = '5inco.com_';
+      const tables = ['categories', 'products', 'sales', 'debtors', 'debts', 'hours', 'expenses', 'fixed_expenses', 'cash_session', 'audit_logs'];
+      tables.forEach(t => {
+        const oldKey = legacyPrefix + t;
+        const newKey = targetPrefix + t;
+        const oldData = localStorage.getItem(oldKey);
+        if (oldData) {
+          try {
+            const parsedOld = JSON.parse(oldData);
+            const parsedNew = JSON.parse(localStorage.getItem(newKey) || 'null');
+            if (Array.isArray(parsedOld) && (!parsedNew || parsedNew.length === 0)) {
+              localStorage.setItem(newKey, oldData);
+            } else if (parsedOld && typeof parsedOld === 'object' && !parsedNew) {
+              localStorage.setItem(newKey, oldData);
+            }
+          } catch(e) {}
+          localStorage.removeItem(oldKey);
+        }
+      });
+    } catch (e) {
+      console.warn('Error en migración de storage de tenant:', e);
+    }
   },
 
   buildKeys() {
     const prefix = this.currentTenant + '_';
     this.KEYS = {
-      users:      'global_users',
-      categories: prefix + 'categories',
-      products:   prefix + 'products',
-      sales:      prefix + 'sales',
-      debtors:    prefix + 'debtors',
-      debts:      prefix + 'debts',
-      hours:      prefix + 'hours',
-      session:    'global_session',
-      expenses:   prefix + 'expenses',
+      users:         'global_users',
+      categories:    prefix + 'categories',
+      products:      prefix + 'products',
+      sales:         prefix + 'sales',
+      debtors:       prefix + 'debtors',
+      debts:         prefix + 'debts',
+      hours:         prefix + 'hours',
+      session:       'global_session',
+      expenses:      prefix + 'expenses',
       fixedExpenses: prefix + 'fixed_expenses',
-      cashSession: prefix + 'cash_session',
-      audit:      prefix + 'audit_logs',
+      cashSession:   prefix + 'cash_session',
+      audit:         prefix + 'audit_logs',
     };
   },
 
@@ -74,7 +107,93 @@ const DB = {
   },
   id() { return this.currentTenant + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); },
 
-  // ── REST helpers (bypass SDK - the publishable key works with REST but not the JS SDK JWT format) ──
+  // ── Persistent Sync Queue ─────────────
+  getSyncQueue() {
+    try {
+      const q = JSON.parse(localStorage.getItem(this.QUEUE_KEY));
+      return Array.isArray(q) ? q : [];
+    } catch { return []; }
+  },
+
+  saveSyncQueue(q) {
+    try {
+      localStorage.setItem(this.QUEUE_KEY, JSON.stringify(q));
+    } catch (e) {
+      console.error('Error guardando cola de sincronización:', e);
+    }
+    this.notifySyncState();
+  },
+
+  enqueue(action, table, method, payload = null, query = '') {
+    const queue = this.getSyncQueue();
+    queue.push({
+      id: 'q_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+      timestamp: Date.now(),
+      action,
+      table,
+      method,
+      payload,
+      query,
+      retries: 0
+    });
+    this.saveSyncQueue(queue);
+    // Disparar procesamiento asíncrono sin bloquear
+    this.processSyncQueue().catch(err => console.warn('Error al procesar cola:', err));
+  },
+
+  async processSyncQueue() {
+    if (this.isSyncingQueue) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      this.notifySyncState();
+      return;
+    }
+    if (!this.supabase) {
+      this.notifySyncState();
+      return;
+    }
+
+    this.isSyncingQueue = true;
+    this.notifySyncState();
+
+    try {
+      while (true) {
+        const queue = this.getSyncQueue();
+        if (queue.length === 0) break;
+        const item = queue[0];
+        try {
+          await this._rest(item.method, item.table, item.payload, item.query);
+          const freshQueue = this.getSyncQueue();
+          const filtered = freshQueue.filter(q => q.id !== item.id);
+          this.saveSyncQueue(filtered);
+        } catch (err) {
+          console.warn(`[SyncQueue] Error procesando ${item.action} en ${item.table}:`, err);
+          const freshQueue = this.getSyncQueue();
+          const target = freshQueue.find(q => q.id === item.id);
+          if (target) {
+            target.retries = (target.retries || 0) + 1;
+            this.saveSyncQueue(freshQueue);
+          }
+          break; // Frenar para preservar el orden cronológico estricto
+        }
+      }
+    } finally {
+      this.isSyncingQueue = false;
+      this.notifySyncState();
+    }
+  },
+
+  notifySyncState() {
+    if (typeof this.onSyncStateChange === 'function') {
+      const qLen = this.getSyncQueue().length;
+      this.onSyncStateChange({
+        isSyncing: this.isSyncingQueue || this.isSyncingData,
+        pendingCount: qLen,
+        isOnline: (typeof navigator === 'undefined' || navigator.onLine) && !!this.supabase
+      });
+    }
+  },
+
+  // ── REST helpers (bypass SDK direct to PostgREST) ──
   async _rest(method, table, body = null, query = '') {
     const url = `${this.SUPABASE_URL}/rest/v1/${table}${query}`;
     let prefer = method === 'POST' ? 'return=minimal' : 'return=representation';
@@ -108,12 +227,10 @@ const DB = {
       return false;
     }
     try {
-      this.supabase = true; // Mark as connected (using REST directly, not SDK)
-      
+      this.supabase = true;
       const overlay = document.getElementById('supabase-loading-overlay');
       if (overlay) overlay.style.display = 'flex';
 
-      // Load ONLY users initially for login
       const users = await this._rest('GET', 'users');
 
       if (!users || users.length === 0) {
@@ -123,7 +240,7 @@ const DB = {
         return true;
       }
 
-      // MIGRATION: update old usernames to new emails if needed
+      // Migración de nombres de usuario si hiciera falta
       for (const u of users) {
         if (!u.username.includes('@')) {
           const newEmail = u.username === 'andrea' ? 'andreatuta@5inco.com' : u.username + '@5inco.com';
@@ -162,101 +279,306 @@ const DB = {
     }
   },
 
-  async initTenantData() {
-    if (!this.supabase || !this.currentTenant) return;
-    // Tenant data is loaded on-demand after login
-    // For simplicity, we load all non-user tables filtered by tenant prefix
-    const prefix = this.currentTenant + '_%';
+  // Sincronización bidireccional completa de datos del negocio
+  async syncTenantData(isSilent = false) {
+    if (!this.supabase || !this.currentTenant) return false;
+    if (this.isSyncingData) return false;
+
+    this.isSyncingData = true;
+    this.notifySyncState();
+
+    // 1. Procesar cualquier acción pendiente en cola
+    await this.processSyncQueue();
+
     try {
       const [categories, products, debtors, debts, sales, expenses, fixedExpenses, hours, cashSessions, auditLogs] = await Promise.all([
         this._rest('GET', 'categories').catch(e => null),
         this._rest('GET', 'products').catch(e => null),
         this._rest('GET', 'debtors').catch(e => null),
         this._rest('GET', 'debts').catch(e => null),
-        this._rest('GET', 'sales').catch(e => null),
+        this._rest('GET', 'sales?order=date.asc').catch(e => null),
         this._rest('GET', 'expenses').catch(e => null),
         this._rest('GET', 'fixed_expenses').catch(e => null),
         this._rest('GET', 'hours').catch(e => null),
         this._rest('GET', 'cash_sessions').catch(e => null),
-        this._rest('GET', 'audit_logs').catch(e => null)
+        this._rest('GET', 'audit_logs?order=date.asc').catch(e => null)
       ]);
 
-      this.set(this.KEYS.categories, categories || []);
-      this.set(this.KEYS.products, (products || []).map(p => {
-        const firstVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : null;
-        const cost = firstVariant ? Number(firstVariant.cost || 0) : 0;
-        return {
-          id: p.id, name: p.name, categoryId: p.category_id,
-          price: Number(p.price || 0), cost, talle: p.talle,
-          stock: Number(p.stock || 0), variants: p.variants || []
-        };
-      }));
-      this.set(this.KEYS.debtors, debtors || []);
-      // Merge debts: keep local debts not in Supabase
-      const remoteDebts = (debts || []).map(d => ({
-        id: d.id, debtorId: d.debtor_id,
-        amount: Number(d.amount || 0), paid: d.paid,
-        date: d.date, paidDate: d.paid_date,
-        saleId: d.sale_id, detail: d.detail || null
-      }));
-      const localDebts = this.get(this.KEYS.debts);
-      const remoteDebtIds = new Set(remoteDebts.map(d => d.id));
-      const mergedDebts = [...remoteDebts];
-      for (const ld of localDebts) {
-        if (!remoteDebtIds.has(ld.id)) mergedDebts.push(ld);
-      }
-      this.set(this.KEYS.debts, mergedDebts);
-      // Merge sales: keep local sales that aren't in Supabase yet
-      const remoteSales = (sales || []).map(s => ({
-        id: s.id, date: s.date,
-        totalFinal: Number(s.total_final || 0),
-        payType: s.pay_type, splitDetails: s.split_details,
-        returned: s.returned, ...(s.details || {})
-      }));
-      const localSales = this.get(this.KEYS.sales);
-      const remoteIds = new Set(remoteSales.map(s => s.id));
-      const mergedSales = [...remoteSales];
-      for (const ls of localSales) {
-        if (!remoteIds.has(ls.id)) mergedSales.push(ls);
-      }
-      mergedSales.sort((a, b) => new Date(a.date) - new Date(b.date));
-      this.set(this.KEYS.sales, mergedSales);
-      this.set(this.KEYS.expenses, expenses || []);
-      this.set(this.KEYS.fixedExpenses, fixedExpenses || []);
+      let hasChanges = false;
 
-      const hoursObj = {};
-      (hours || []).forEach(h => {
-        if (!hoursObj[h.user_id]) hoursObj[h.user_id] = {};
-        hoursObj[h.user_id][h.date] = Number(h.hours || 0);
-      });
-      this.set(this.KEYS.hours, hoursObj);
+      // ── Categorías ──
+      if (categories) {
+        const localCats = this.getCategories();
+        const remoteCatIds = new Set(categories.map(c => c.id));
+        for (const lc of localCats) {
+          if (!remoteCatIds.has(lc.id)) {
+            this.enqueue('category_create', 'categories', 'POST', [{ id: lc.id, name: lc.name }]);
+            categories.push(lc);
+          }
+        }
+        if (JSON.stringify(localCats) !== JSON.stringify(categories)) {
+          this.set(this.KEYS.categories, categories);
+          hasChanges = true;
+        }
+      }
 
-      const cashObj = {};
-      (cashSessions || []).forEach(cs => {
-        cashObj[cs.date] = {
-          openingCash: Number(cs.opening_cash || 0),
-          active: cs.active, openedBy: cs.opened_by, openedAt: cs.opened_at
-        };
-      });
-      this.set(this.KEYS.cashSession, cashObj);
-      
+      // ── Productos ──
+      if (products) {
+        const remoteProds = products.map(p => {
+          const firstVariant = (p.variants && p.variants.length > 0) ? p.variants[0] : null;
+          const cost = firstVariant ? Number(firstVariant.cost || 0) : 0;
+          return {
+            id: p.id, name: p.name, categoryId: p.category_id,
+            price: Number(p.price || 0), cost, talle: p.talle,
+            stock: Number(p.stock || 0), variants: p.variants || []
+          };
+        });
+        const localProds = this.getProducts();
+        const remoteProdIds = new Set(remoteProds.map(p => p.id));
+        for (const lp of localProds) {
+          if (!remoteProdIds.has(lp.id)) {
+            const remoteVariants = (lp.variants && lp.variants.length > 0)
+              ? lp.variants
+              : [{ label: 'Único', price: lp.price, stock: lp.stock, cost: lp.cost || 0 }];
+            this.enqueue('product_create', 'products', 'POST', [{
+              id: lp.id, name: lp.name, category_id: lp.categoryId,
+              price: lp.price, talle: lp.talle || null, stock: lp.stock,
+              variants: remoteVariants
+            }]);
+            remoteProds.push(lp);
+          }
+        }
+        if (JSON.stringify(localProds) !== JSON.stringify(remoteProds)) {
+          this.set(this.KEYS.products, remoteProds);
+          hasChanges = true;
+        }
+      }
+
+      // ── Deudores ──
+      if (debtors) {
+        const localDebtors = this.getDebtors();
+        const remoteDebtorIds = new Set(debtors.map(d => d.id));
+        for (const ld of localDebtors) {
+          if (!remoteDebtorIds.has(ld.id)) {
+            this.enqueue('debtor_create', 'debtors', 'POST', [{ ...ld }]);
+            debtors.push(ld);
+          }
+        }
+        if (JSON.stringify(localDebtors) !== JSON.stringify(debtors)) {
+          this.set(this.KEYS.debtors, debtors);
+          hasChanges = true;
+        }
+      }
+
+      // ── Deudas ──
+      if (debts) {
+        const remoteDebts = debts.map(d => ({
+          id: d.id, debtorId: d.debtor_id,
+          amount: Number(d.amount || 0), paid: Boolean(d.paid),
+          date: d.date, paidDate: d.paid_date,
+          saleId: d.sale_id, detail: d.detail || null
+        }));
+        const localDebts = this.getDebts();
+        const remoteDebtIds = new Set(remoteDebts.map(d => d.id));
+        const mergedDebts = [...remoteDebts];
+        for (const ld of localDebts) {
+          if (!remoteDebtIds.has(ld.id)) {
+            mergedDebts.push(ld);
+            this.enqueue('debt_create', 'debts', 'POST', [{
+              id: ld.id, debtor_id: ld.debtorId, amount: ld.amount,
+              paid: Boolean(ld.paid), date: ld.date, paidDate: ld.paidDate || null,
+              sale_id: ld.saleId || null, detail: ld.detail || null
+            }]);
+          }
+        }
+        if (JSON.stringify(localDebts) !== JSON.stringify(mergedDebts)) {
+          this.set(this.KEYS.debts, mergedDebts);
+          hasChanges = true;
+        }
+      }
+
+      // ── Ventas ──
+      if (sales) {
+        const remoteSales = sales.map(s => ({
+          id: s.id, date: s.date,
+          totalFinal: Number(s.total_final || 0),
+          payType: s.pay_type, splitDetails: s.split_details,
+          returned: Boolean(s.returned), ...(s.details || {})
+        }));
+        const localSales = this.getSales();
+        const remoteIds = new Set(remoteSales.map(s => s.id));
+        const mergedSales = [...remoteSales];
+        for (const ls of localSales) {
+          if (!remoteIds.has(ls.id)) {
+            mergedSales.push(ls);
+            const { date, totalFinal, payType, splitDetails, returned, ...rest } = ls;
+            this.enqueue('sale_create', 'sales', 'POST', [{
+              id: ls.id,
+              date: date,
+              total_final: totalFinal,
+              pay_type: payType,
+              split_details: splitDetails || null,
+              returned: Boolean(returned),
+              details: rest
+            }]);
+          }
+        }
+        mergedSales.sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (JSON.stringify(localSales) !== JSON.stringify(mergedSales)) {
+          this.set(this.KEYS.sales, mergedSales);
+          hasChanges = true;
+        }
+      }
+
+      // ── Gastos ──
+      if (expenses) {
+        const remoteExpenses = expenses.map(e => {
+          let parsedDesc = {};
+          if (e.description && typeof e.description === 'string' && e.description.startsWith('{')) {
+            try { parsedDesc = JSON.parse(e.description); } catch(_) {}
+          }
+          return {
+            id: e.id,
+            date: e.date,
+            amount: Number(e.amount || 0),
+            name: parsedDesc.name || e.description || 'Gasto',
+            type: parsedDesc.type || 'caja',
+            cashier: parsedDesc.cashier || null
+          };
+        });
+        const localExpenses = this.getExpenses();
+        const remoteExpIds = new Set(remoteExpenses.map(e => e.id));
+        const mergedExpenses = [...remoteExpenses];
+        for (const le of localExpenses) {
+          if (!remoteExpIds.has(le.id)) {
+            mergedExpenses.push(le);
+            const descPayload = JSON.stringify({ name: le.name, type: le.type, cashier: le.cashier });
+            this.enqueue('expense_create', 'expenses', 'POST', [{
+              id: le.id, date: le.date, amount: le.amount, description: descPayload
+            }]);
+          }
+        }
+        mergedExpenses.sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (JSON.stringify(localExpenses) !== JSON.stringify(mergedExpenses)) {
+          this.set(this.KEYS.expenses, mergedExpenses);
+          hasChanges = true;
+        }
+      }
+
+      // ── Gastos Fijos ──
+      if (fixedExpenses) {
+        const localFE = this.getFixedExpenses();
+        const remoteFEIds = new Set(fixedExpenses.map(f => f.id));
+        for (const lf of localFE) {
+          if (!remoteFEIds.has(lf.id)) {
+            this.enqueue('fixed_expense_create', 'fixed_expenses', 'POST', [{ ...lf }]);
+            fixedExpenses.push(lf);
+          }
+        }
+        if (JSON.stringify(localFE) !== JSON.stringify(fixedExpenses)) {
+          this.set(this.KEYS.fixedExpenses, fixedExpenses);
+          hasChanges = true;
+        }
+      }
+
+      // ── Horas de Empleados ──
+      if (hours) {
+        const hoursObj = {};
+        hours.forEach(h => {
+          if (!hoursObj[h.user_id]) hoursObj[h.user_id] = {};
+          hoursObj[h.user_id][h.date] = Number(h.hours || 0);
+        });
+        const localHours = this.getHours();
+        Object.entries(localHours).forEach(([uId, days]) => {
+          if (!hoursObj[uId]) hoursObj[uId] = {};
+          Object.entries(days).forEach(([dStr, hVal]) => {
+            if (hoursObj[uId][dStr] === undefined) {
+              hoursObj[uId][dStr] = hVal;
+              this.enqueue('hours_set', 'hours', 'POST', [{
+                user_id: uId, date: dStr, hours: hVal
+              }], '?on_conflict=user_id,date');
+            }
+          });
+        });
+        if (JSON.stringify(localHours) !== JSON.stringify(hoursObj)) {
+          this.set(this.KEYS.hours, hoursObj);
+          hasChanges = true;
+        }
+      }
+
+      // ── Sesiones de Caja ──
+      if (cashSessions) {
+        const cashObj = {};
+        cashSessions.forEach(cs => {
+          cashObj[cs.date] = {
+            openingCash: Number(cs.opening_cash || 0),
+            active: Boolean(cs.active), openedBy: cs.opened_by, openedAt: cs.opened_at
+          };
+        });
+        const localCash = this.getObj(this.KEYS.cashSession);
+        Object.entries(localCash).forEach(([dStr, csData]) => {
+          if (!cashObj[dStr]) {
+            cashObj[dStr] = csData;
+            this.enqueue('cash_set', 'cash_sessions', 'POST', [{
+              date: dStr,
+              opening_cash: csData.openingCash,
+              active: csData.active,
+              opened_by: csData.openedBy,
+              opened_at: csData.openedAt
+            }], '?on_conflict=date');
+          }
+        });
+        if (JSON.stringify(localCash) !== JSON.stringify(cashObj)) {
+          this.set(this.KEYS.cashSession, cashObj);
+          hasChanges = true;
+        }
+      }
+
+      // ── Auditoría ──
       if (auditLogs) {
         const remoteAudits = auditLogs.map(a => ({
           id: a.id, date: a.date, userId: a.user_id, userName: a.user_name,
           action: a.action, description: a.description, details: a.details
         }));
         const localAudits = this.get(this.KEYS.audit) || [];
-        const merged = [...localAudits];
-        const localIds = new Set(merged.map(a => a.id));
-        for (const ra of remoteAudits) {
-          if (!localIds.has(ra.id)) merged.push(ra);
+        const merged = [...remoteAudits];
+        const remoteIds = new Set(remoteAudits.map(a => a.id));
+        for (const la of localAudits) {
+          if (!remoteIds.has(la.id)) {
+            merged.push(la);
+            this.enqueue('audit_log', 'audit_logs', 'POST', [{
+              id: la.id, tenant_id: this.currentTenant, date: la.date,
+              user_id: la.userId, user_name: la.userName, action: la.action,
+              description: la.description, details: la.details
+            }]);
+          }
         }
         merged.sort((a,b) => a.date.localeCompare(b.date));
-        this.set(this.KEYS.audit, merged);
+        if (JSON.stringify(localAudits) !== JSON.stringify(merged)) {
+          this.set(this.KEYS.audit, merged);
+          hasChanges = true;
+        }
       }
+
+      // Procesar cualquier cola generada durante la reconciliación
+      this.processSyncQueue().catch(() => {});
+
+      if (hasChanges && typeof this.onDataChange === 'function') {
+        this.onDataChange();
+      }
+
+      return hasChanges;
     } catch (e) {
-      console.error('Error cargando datos del tenant:', e);
+      console.error('Error sincronizando datos con Supabase:', e);
+      return false;
+    } finally {
+      this.isSyncingData = false;
+      this.notifySyncState();
     }
+  },
+
+  async initTenantData() {
+    return this.syncTenantData(false);
   },
 
   async seedSupabase() {
@@ -291,11 +613,11 @@ const DB = {
 
     try {
       await Promise.all([
-        this.supabase.from('users').insert(users),
-        this.supabase.from('categories').insert(categories),
-        this.supabase.from('products').insert(products),
-        this.supabase.from('debtors').insert(debtors),
-        this.supabase.from('fixed_expenses').insert(fixedExpenses)
+        this._rest('POST', 'users', users),
+        this._rest('POST', 'categories', categories),
+        this._rest('POST', 'products', products),
+        this._rest('POST', 'debtors', debtors),
+        this._rest('POST', 'fixed_expenses', fixedExpenses)
       ]);
       console.log('Se sembraron los datos por defecto en Supabase.');
       await this.initSupabase();
@@ -304,9 +626,7 @@ const DB = {
     }
   },
 
-  // ── Seed initial data ─────────────────
   seed() {
-    // Fallback de sembrado local si no está usando Supabase
     if (this.supabase) return;
 
     const users = [
@@ -366,21 +686,21 @@ const DB = {
       details
     };
     logs.push(entry);
-    // Keep max 2000 entries
     if (logs.length > 2000) logs.splice(0, logs.length - 2000);
     this.set(this.KEYS.audit, logs);
     
-    // Sync to Supabase
+    // Sync to Supabase con tenant_id obligatorio
     if (this.supabase && this.currentTenant) {
-      this._rest('POST', 'audit_logs', [{
+      this.enqueue('audit_log', 'audit_logs', 'POST', [{
         id: entry.id,
+        tenant_id: this.currentTenant,
         date: entry.date,
         user_id: entry.userId,
         user_name: entry.userName,
         action: entry.action,
         description: entry.description,
         details: entry.details
-      }]).catch(e => console.warn('Supabase audit sync warning (table may not exist)', e));
+      }]);
     }
   },
 
@@ -394,8 +714,8 @@ const DB = {
   saveUsers(u) {
     this.set(this.KEYS.users, u);
     if (this.supabase) {
-      const promises = u.map(user => 
-        this.supabase.from('users').upsert({
+      u.forEach(user => {
+        this.enqueue('user_upsert', 'users', 'POST', [{
           id: user.id,
           name: user.name,
           username: user.username,
@@ -404,9 +724,8 @@ const DB = {
           salary_hour: user.salaryHour,
           default_hours: user.defaultHours,
           commission_pct: user.commissionPct || 0
-        })
-      );
-      Promise.all(promises).catch(err => console.error('Error sincronizando usuarios:', err));
+        }], '?on_conflict=id');
+      });
     }
   },
   findUser(emailInput, passwordInput) {
@@ -423,7 +742,6 @@ const DB = {
       const uPass = String(u.password || '').trim();
       const uLowerPass = uPass.toLowerCase();
 
-      // Email / username matching (exact, prefix match for 5inco.com, or alias)
       let emailMatches = (uName === rawEmail || uName.split('@')[0] === rawEmail || uName === rawEmail + '@5inco.com');
 
       if (!emailMatches) {
@@ -434,15 +752,12 @@ const DB = {
       }
 
       if (emailMatches) {
-        // Password matching: exact, case-insensitive, or standard fallbacks (123456 / 2812 / TOMAS2812)
         let passMatches = (uPass === rawPass || uLowerPass === lowerPass);
-
         if (!passMatches) {
           if (rawPass === '123456' || rawPass === '2812' || lowerPass === 'tomas2812' || lowerPass === '2812' || lowerPass === '123456') {
             passMatches = true;
           }
         }
-
         if (passMatches) {
           return u;
         }
@@ -459,7 +774,7 @@ const DB = {
     cats.push(cat); this.set(this.KEYS.categories, cats);
     this.addAuditLog('category_create', `Categoría creada: "${name}"`, { catId: cat.id, name });
     if (this.supabase) {
-      this._rest('POST', 'categories', [{ ...cat }]).catch(e => console.error(e));
+      this.enqueue('category_create', 'categories', 'POST', [{ ...cat }]);
     }
     return cat;
   },
@@ -468,7 +783,7 @@ const DB = {
     this.set(this.KEYS.categories, this.getCategories().filter(c => c.id !== id));
     this.addAuditLog('category_delete', `Categoría eliminada: "${cat ? cat.name : id}"`, { catId: id });
     if (this.supabase) {
-      this._rest('DELETE', `categories?id=eq.${id}`).catch(e => console.error(e));
+      this.enqueue('category_delete', 'categories', 'DELETE', null, `?id=eq.${id}`);
     }
   },
   updateCategory(id, name) {
@@ -477,7 +792,7 @@ const DB = {
     this.set(this.KEYS.categories, cats);
     this.addAuditLog('category_update', `Categoría renombrada: "${old ? old.name : id}" → "${name}"`, { catId: id, oldName: old?.name, newName: name });
     if (this.supabase) {
-      this._rest('PATCH', `categories?id=eq.${id}`, { name }).catch(e => console.error(e));
+      this.enqueue('category_update', 'categories', 'PATCH', { name }, `?id=eq.${id}`);
     }
   },
 
@@ -508,20 +823,18 @@ const DB = {
     prods.push(p); this.set(this.KEYS.products, prods);
     this.addAuditLog('product_create', `Prenda creada: "${p.name}" (${p.talle || 'sin talle'}) – Stock: ${p.stock} – Precio: $${p.price}`, { productId: p.id, name: p.name, talle: p.talle, price: p.price, stock: p.stock });
     if (this.supabase) {
-      // Build variants array for Supabase (includes cost in JSONB)
       const remoteVariants = (p.variants && p.variants.length > 0)
         ? p.variants
         : [{ label: 'Único', price: p.price, stock: p.stock, cost: p.cost || 0 }];
-      this._rest('POST', 'products', [{
+      this.enqueue('product_create', 'products', 'POST', [{
         id: p.id, name: p.name, category_id: p.categoryId,
         price: p.price, talle: p.talle || null, stock: p.stock,
         variants: remoteVariants
-      }]).catch(e => console.error('Error insertando producto en Supabase:', e));
+      }]);
     }
     return p;
   },
   updateProduct(id, data) {
-    const old = this.getProducts().find(p => p.id === id);
     const prods = this.getProducts().map(p => p.id === id ? { ...p, ...data } : p);
     this.set(this.KEYS.products, prods);
     const updated = prods.find(p => p.id === id);
@@ -533,13 +846,11 @@ const DB = {
       if (updated.price !== undefined) payload.price = updated.price;
       if (updated.stock !== undefined) payload.stock = updated.stock;
       if (updated.talle !== undefined) payload.talle = updated.talle || null;
-      // Embed cost inside variants JSONB (no cost column in Supabase)
       const remoteVariants = (updated.variants && updated.variants.length > 0)
         ? updated.variants
         : [{ label: 'Único', price: updated.price, stock: updated.stock, cost: updated.cost || 0 }];
       payload.variants = remoteVariants;
-      this._rest('PATCH', `products?id=eq.${id}`, payload)
-        .catch(e => console.error('Error actualizando producto en Supabase:', e));
+      this.enqueue('product_update', 'products', 'PATCH', payload, `?id=eq.${id}`);
     }
   },
   deleteProduct(id) {
@@ -547,7 +858,7 @@ const DB = {
     this.set(this.KEYS.products, this.getProducts().filter(p => p.id !== id));
     this.addAuditLog('product_delete', `Prenda eliminada: "${prod ? prod.name : id}"`, { productId: id, name: prod?.name });
     if (this.supabase) {
-      this._rest('DELETE', `products?id=eq.${id}`).catch(e => console.error(e));
+      this.enqueue('product_delete', 'products', 'DELETE', null, `?id=eq.${id}`);
     }
   },
 
@@ -560,15 +871,15 @@ const DB = {
     this.addAuditLog('sale_create', `Venta registrada – ${s.payType} – Total: $${s.totalFinal}`, { saleId: s.id, total: s.totalFinal, payType: s.payType });
     if (this.supabase && this.currentTenant) {
       const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
-      this._rest('POST', 'sales', [{
+      this.enqueue('sale_create', 'sales', 'POST', [{
         id: s.id,
         date: date,
         total_final: totalFinal,
         pay_type: payType,
         split_details: splitDetails || null,
-        returned: returned || false,
+        returned: Boolean(returned),
         details: rest
-      }]).catch(e => console.error('Error insertando venta en Supabase:', e));
+      }]);
     }
     return s;
   },
@@ -579,17 +890,15 @@ const DB = {
     if (data.returned) {
       this.addAuditLog('sale_return', `Venta devuelta – Total: $${s?.totalFinal || '?'}`, { saleId: id });
     }
-    if (this.supabase) {
-      if (s) {
-        const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
-        this._rest('PATCH', `sales?id=eq.${id}`, {
-          total_final: totalFinal,
-          pay_type: payType,
-          split_details: splitDetails || null,
-          returned: returned || false,
-          details: rest
-        }).catch(e => console.error(e));
-      }
+    if (this.supabase && s) {
+      const { date, totalFinal, payType, splitDetails, returned, ...rest } = s;
+      this.enqueue('sale_update', 'sales', 'PATCH', {
+        total_final: totalFinal,
+        pay_type: payType,
+        split_details: splitDetails || null,
+        returned: Boolean(returned),
+        details: rest
+      }, `?id=eq.${id}`);
     }
   },
 
@@ -601,7 +910,7 @@ const DB = {
     debtors.push(d); this.set(this.KEYS.debtors, debtors);
     this.addAuditLog('debtor_create', `Deudor creado: "${d.name}"`, { debtorId: d.id, name: d.name, phone: d.phone });
     if (this.supabase) {
-      this._rest('POST', 'debtors', [{ ...d }]).catch(e => console.error(e));
+      this.enqueue('debtor_create', 'debtors', 'POST', [{ ...d }]);
     }
     return d;
   },
@@ -613,7 +922,7 @@ const DB = {
     if (this.supabase) {
       const d = debtors.find(x => x.id === id);
       if (d) {
-        this._rest('PATCH', `debtors?id=eq.${id}`, d).catch(e => console.error(e));
+        this.enqueue('debtor_update', 'debtors', 'PATCH', d, `?id=eq.${id}`);
       }
     }
   },
@@ -622,7 +931,7 @@ const DB = {
     this.set(this.KEYS.debtors, this.getDebtors().filter(d => d.id !== id));
     this.addAuditLog('debtor_delete', `Deudor eliminado: "${deb ? deb.name : id}"`, { debtorId: id });
     if (this.supabase) {
-      this._rest('DELETE', `debtors?id=eq.${id}`).catch(e => console.error(e));
+      this.enqueue('debtor_delete', 'debtors', 'DELETE', null, `?id=eq.${id}`);
     }
   },
 
@@ -634,16 +943,16 @@ const DB = {
     debts.push(d); this.set(this.KEYS.debts, debts);
 
     if (this.supabase) {
-      this._rest('POST', 'debts', [{
+      this.enqueue('debt_create', 'debts', 'POST', [{
         id: d.id,
         debtor_id: d.debtorId,
         amount: d.amount,
-        paid: d.paid,
+        paid: Boolean(d.paid),
         date: d.date,
         paid_date: d.paidDate || null,
         sale_id: d.saleId || null,
         detail: d.detail || null
-      }]).catch(e => console.error(e));
+      }]);
     }
     return d;
   },
@@ -655,10 +964,10 @@ const DB = {
     const debtor = debt ? this.getDebtors().find(d => d.id === debt.debtorId) : null;
     this.addAuditLog('debt_paid', `Deuda cobrada – ${debtor ? debtor.name : 'Deudor'} – $${debt ? debt.amount : '?'}`, { debtId: id, amount: debt?.amount, debtorName: debtor?.name });
     if (this.supabase) {
-      this._rest('PATCH', `debts?id=eq.${id}`, {
+      this.enqueue('debt_pay', 'debts', 'PATCH', {
         paid: true,
         paid_date: dateStr
-      }).catch(e => console.error(e));
+      }, `?id=eq.${id}`);
     }
   },
   getDebtorBalance(debtorId) {
@@ -680,11 +989,11 @@ const DB = {
       this.addAuditLog('hours_adjust', `Horas ajustadas – ${u ? u.name : userId} – ${date}: ${prev !== undefined ? prev + 'h → ' : ''}${hours}h`, { userId, date, prev, new: hours });
     }
     if (this.supabase) {
-      this._rest('POST', 'hours', [{
+      this.enqueue('hours_set', 'hours', 'POST', [{
         user_id: userId,
         date: date,
         hours: hours
-      }], '?on_conflict=user_id,date').catch(e => console.error(e));
+      }], '?on_conflict=user_id,date');
     }
   },
   removeHoursForDay(userId, dateStr) {
@@ -694,7 +1003,7 @@ const DB = {
       this.set(this.KEYS.hours, h);
       this.addAuditLog('hours_delete', `Registro de horas eliminado – ${dateStr}`, { userId, dateStr });
       if (this.supabase) {
-        this._rest('DELETE', `hours?user_id=eq.${userId}&date=eq.${dateStr}`).catch(e => console.error(e));
+        this.enqueue('hours_delete', 'hours', 'DELETE', null, `?user_id=eq.${userId}&date=eq.${dateStr}`);
       }
     }
   },
@@ -723,23 +1032,24 @@ const DB = {
     const expenses = this.getExpenses();
     const e = { id: this.id(), date: new Date().toISOString(), ...data };
     expenses.push(e); this.set(this.KEYS.expenses, expenses);
-    this.addAuditLog('expense_create', `Gasto registrado – $${e.amount} – ${e.description || e.detail || 'Sin descripción'}`, { expenseId: e.id, amount: e.amount, description: e.description || e.detail });
+    this.addAuditLog('expense_create', `Gasto registrado – $${e.amount} – ${e.name || e.description || e.detail || 'Sin descripción'}`, { expenseId: e.id, amount: e.amount, description: e.name || e.description || e.detail });
     if (this.supabase) {
-      this._rest('POST', 'expenses', [{
+      const descPayload = JSON.stringify({ name: e.name || e.description || e.detail || 'Gasto', type: e.type || 'caja', cashier: e.cashier || null });
+      this.enqueue('expense_create', 'expenses', 'POST', [{
         id: e.id,
         date: e.date,
         amount: e.amount,
-        description: e.description || e.detail || null
-      }]).catch(e => console.error(e));
+        description: descPayload
+      }]);
     }
     return e;
   },
   deleteExpense(id) {
     const exp = this.getExpenses().find(e => e.id === id);
     this.set(this.KEYS.expenses, this.getExpenses().filter(e => e.id !== id));
-    this.addAuditLog('expense_delete', `Gasto eliminado – $${exp ? exp.amount : '?'} – ${exp?.description || exp?.detail || ''}`, { expenseId: id });
+    this.addAuditLog('expense_delete', `Gasto eliminado – $${exp ? exp.amount : '?'} – ${exp?.name || exp?.description || exp?.detail || ''}`, { expenseId: id });
     if (this.supabase) {
-      this._rest('DELETE', `expenses?id=eq.${id}`).catch(e => console.error(e));
+      this.enqueue('expense_delete', 'expenses', 'DELETE', null, `?id=eq.${id}`);
     }
   },
 
@@ -751,21 +1061,21 @@ const DB = {
     fe.push(item); this.set(this.KEYS.fixedExpenses, fe);
 
     if (this.supabase) {
-      this._rest('POST', 'fixed_expenses', [{ ...item }]).catch(e => console.error(e));
+      this.enqueue('fixed_expense_create', 'fixed_expenses', 'POST', [{ ...item }]);
     }
     return item;
   },
   deleteFixedExpense(id) {
     this.set(this.KEYS.fixedExpenses, this.getFixedExpenses().filter(f => f.id !== id));
     if (this.supabase) {
-      this._rest('DELETE', `fixed_expenses?id=eq.${id}`).catch(e => console.error(e));
+      this.enqueue('fixed_expense_delete', 'fixed_expenses', 'DELETE', null, `?id=eq.${id}`);
     }
   },
   updateFixedExpense(id, name, amount) {
     const fe = this.getFixedExpenses().map(f => f.id === id ? { ...f, name, amount } : f);
     this.set(this.KEYS.fixedExpenses, fe);
     if (this.supabase) {
-      this._rest('PATCH', `fixed_expenses?id=eq.${id}`, { name, amount }).catch(e => console.error(e));
+      this.enqueue('fixed_expense_update', 'fixed_expenses', 'PATCH', { name, amount }, `?id=eq.${id}`);
     }
   },
 
@@ -783,13 +1093,13 @@ const DB = {
       this.addAuditLog('cash_open', `Apertura de caja – Efectivo inicial: $${data.openingCash}`, { date: dateStr, openingCash: data.openingCash, openedBy: data.openedBy });
     }
     if (this.supabase) {
-      this._rest('POST', 'cash_sessions', [{
+      this.enqueue('cash_set', 'cash_sessions', 'POST', [{
         date: dateStr,
         opening_cash: data.openingCash,
-        active: data.active,
+        active: Boolean(data.active),
         opened_by: data.openedBy,
         opened_at: data.openedAt
-      }], '?on_conflict=date').catch(e => console.error(e));
+      }], '?on_conflict=date');
     }
   },
 
@@ -798,8 +1108,8 @@ const DB = {
     this.set(this.KEYS.users, users);
     this.addAuditLog('user_update', actionDesc, {});
     if (this.supabase) {
-      const promises = users.map(user =>
-        this._rest('POST', 'users', [{
+      users.forEach(user => {
+        this.enqueue('user_upsert', 'users', 'POST', [{
           id: user.id,
           name: user.name,
           username: user.username,
@@ -808,9 +1118,8 @@ const DB = {
           salary_hour: user.salaryHour,
           default_hours: user.defaultHours,
           commission_pct: user.commissionPct || 0
-        }], '?on_conflict=id')
-      );
-      Promise.all(promises).catch(err => console.error('Error sincronizando usuarios:', err));
+        }], '?on_conflict=id');
+      });
     }
   },
 };

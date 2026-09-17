@@ -86,7 +86,10 @@
         <span style="color: #786a55">Stack</span><span style="background: linear-gradient(135deg, #c4a882 0%, #8b7355 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; font-weight: 900;">Hard</span>
       </span>
     </div>
-    <div class="mobile-user-name" id="mobile-user-name"></div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-left: auto;">
+      <div class="sync-badge-widget" id="mobile-sync-badge"></div>
+      <div class="mobile-user-name" id="mobile-user-name"></div>
+    </div>
   </div>
 
   <!-- Sidebar Overlay -->
@@ -150,8 +153,8 @@
 <div id="toast-container"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="data.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="data.js?v=5"></script>
+<script src="app.js?v=5"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
