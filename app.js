@@ -572,7 +572,6 @@ function setupRealtimeSyncEngine() {
   if (window._syncEngineInitialized) return;
   window._syncEngineInitialized = true;
 
-  DB.onSyncStateChange = updateSyncStatusUI;
   DB.onDataChange = handleDataChangedRemotely;
 
   // Escuchar reactivación cuando el usuario desbloquea el celular o vuelve a la pestaña
@@ -591,13 +590,11 @@ function setupRealtimeSyncEngine() {
 
   // Conexión a internet reanudada
   window.addEventListener('online', () => {
-    toast('Conexión a internet restablecida. Sincronizando datos...', 'info');
     DB.processSyncQueue();
     DB.syncTenantData();
   });
 
   window.addEventListener('offline', () => {
-    toast('Modo sin conexión. Tus cambios se guardarán localmente y se enviarán al reconectar.', 'warning');
     DB.notifySyncState();
   });
 
@@ -632,64 +629,6 @@ function handleDataChangedRemotely() {
   renderView(activeId);
 }
 
-function updateSyncStatusUI(state) {
-  const syncBadges = document.querySelectorAll('.sync-badge-widget');
-  if (!syncBadges.length) return;
-
-  const isSyncing = state?.isSyncing || DB.isSyncingQueue || DB.isSyncingData;
-  const pendingCount = state?.pendingCount !== undefined ? state.pendingCount : DB.getSyncQueue().length;
-  const isOnline = state?.isOnline !== undefined ? state.isOnline : (navigator.onLine && !!DB.supabase);
-
-  let html = '';
-  if (!isOnline) {
-    html = `<button class="sync-pill offline" onclick="triggerManualSync()" title="Sin conexión a internet. Clic para reintentar.">
-      <span class="sync-dot red"></span>
-      <span class="sync-label">${pendingCount > 0 ? pendingCount + ' pend.' : 'Sin conexión'}</span>
-    </button>`;
-  } else if (isSyncing) {
-    html = `<button class="sync-pill syncing" disabled title="Sincronizando con la nube...">
-      <span class="sync-spin">⟳</span>
-      <span class="sync-label">Sincronizando...</span>
-    </button>`;
-  } else if (pendingCount > 0) {
-    html = `<button class="sync-pill pending" onclick="triggerManualSync()" title="Hay ${pendingCount} cambio(s) pendientes de subir. Clic para forzar envío.">
-      <span class="sync-dot yellow"></span>
-      <span class="sync-label">${pendingCount} pendiente${pendingCount>1?'s':''}</span>
-    </button>`;
-  } else {
-    html = `<button class="sync-pill synced" onclick="triggerManualSync()" title="Todos los dispositivos están sincronizados. Clic para actualizar ahora.">
-      <span class="sync-dot green"></span>
-      <span class="sync-label">Sincronizado</span>
-    </button>`;
-  }
-
-  syncBadges.forEach(b => {
-    b.innerHTML = html;
-  });
-}
-
-async function triggerManualSync() {
-  const pills = document.querySelectorAll('.sync-pill');
-  pills.forEach(p => {
-    p.innerHTML = `<span class="sync-spin">⟳</span> <span class="sync-label">Sincronizando...</span>`;
-  });
-
-  try {
-    await DB.processSyncQueue();
-    const hasChanges = await DB.syncTenantData();
-    updateSyncStatusUI();
-    if (hasChanges) {
-      const activeId = document.querySelector('.view.active')?.id;
-      if (activeId) renderView(activeId);
-    }
-    toast('Datos sincronizados con la nube correctamente.', 'success');
-  } catch (err) {
-    console.error('Error en sincronización manual:', err);
-    updateSyncStatusUI();
-    toast('Error al sincronizar con el servidor.', 'error');
-  }
-}
-
 // ─── App Init ─────────────────────────────────────────────
 function initApp() {
   showPage('page-app');
@@ -697,7 +636,6 @@ function initApp() {
   renderMobileNav();
   setupMobileControls();
   setupRealtimeSyncEngine();
-  updateSyncStatusUI();
 
   // Bind logout button safely
   const logoutBtn = el('btn-logout');
@@ -743,8 +681,7 @@ function renderSidebar() {
         <div class="user-name">${currentUser.name}</div>
         <span class="role-badge ${currentUser.role}">${currentUser.role === 'jefe' ? 'Administrador' : 'Vendedor'}</span>
       </div>
-    </div>
-    <div class="sync-badge-widget" id="desktop-sync-badge" style="margin-top:10px;display:flex;justify-content:flex-start;"></div>`;
+    </div>`;
 
   const nav = el('sidebar-nav');
   const jefe = currentUser.role === 'jefe';

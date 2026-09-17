@@ -19,6 +19,13 @@ const DB = {
   init() {
     this.buildKeys();
     this.migrateLegacyTenantStorage();
+    // Limpiar cola inflada o bloqueada de sincronizaciones anteriores
+    try {
+      if (!localStorage.getItem('5inco_queue_purged_v2')) {
+        localStorage.removeItem(this.QUEUE_KEY);
+        localStorage.setItem('5inco_queue_purged_v2', '1');
+      }
+    } catch(e) {}
     // Clear any old/corrupted user cache so Supabase is always the source of truth
     const oldKeys = ['users', '5inco.com_users', 'global_users'];
     oldKeys.forEach(k => {
@@ -171,9 +178,18 @@ const DB = {
           const target = freshQueue.find(q => q.id === item.id);
           if (target) {
             target.retries = (target.retries || 0) + 1;
-            this.saveSyncQueue(freshQueue);
+            const errMsg = String(err && err.message ? err.message : err);
+            // Si el item tiene error irrecuperable (FK, duplicado, 4xx) o superó reintentos, descartarlo
+            if (target.retries >= 3 || errMsg.includes('409') || errMsg.includes('400') || errMsg.includes('404')) {
+              console.warn(`[SyncQueue] Descartando item que no puede procesarse:`, target);
+              const filtered = freshQueue.filter(q => q.id !== item.id);
+              this.saveSyncQueue(filtered);
+              continue; // Continuar con el siguiente elemento de la cola
+            } else {
+              this.saveSyncQueue(freshQueue);
+            }
           }
-          break; // Frenar para preservar el orden cronológico estricto
+          break; // Frenar si es error temporal o de conexión
         }
       }
     } finally {
@@ -309,13 +325,6 @@ const DB = {
       // ── Categorías ──
       if (categories) {
         const localCats = this.getCategories();
-        const remoteCatIds = new Set(categories.map(c => c.id));
-        for (const lc of localCats) {
-          if (!remoteCatIds.has(lc.id)) {
-            this.enqueue('category_create', 'categories', 'POST', [{ id: lc.id, name: lc.name }]);
-            categories.push(lc);
-          }
-        }
         if (JSON.stringify(localCats) !== JSON.stringify(categories)) {
           this.set(this.KEYS.categories, categories);
           hasChanges = true;
@@ -334,20 +343,6 @@ const DB = {
           };
         });
         const localProds = this.getProducts();
-        const remoteProdIds = new Set(remoteProds.map(p => p.id));
-        for (const lp of localProds) {
-          if (!remoteProdIds.has(lp.id)) {
-            const remoteVariants = (lp.variants && lp.variants.length > 0)
-              ? lp.variants
-              : [{ label: 'Único', price: lp.price, stock: lp.stock, cost: lp.cost || 0 }];
-            this.enqueue('product_create', 'products', 'POST', [{
-              id: lp.id, name: lp.name, category_id: lp.categoryId,
-              price: lp.price, talle: lp.talle || null, stock: lp.stock,
-              variants: remoteVariants
-            }]);
-            remoteProds.push(lp);
-          }
-        }
         if (JSON.stringify(localProds) !== JSON.stringify(remoteProds)) {
           this.set(this.KEYS.products, remoteProds);
           hasChanges = true;
@@ -357,13 +352,6 @@ const DB = {
       // ── Deudores ──
       if (debtors) {
         const localDebtors = this.getDebtors();
-        const remoteDebtorIds = new Set(debtors.map(d => d.id));
-        for (const ld of localDebtors) {
-          if (!remoteDebtorIds.has(ld.id)) {
-            this.enqueue('debtor_create', 'debtors', 'POST', [{ ...ld }]);
-            debtors.push(ld);
-          }
-        }
         if (JSON.stringify(localDebtors) !== JSON.stringify(debtors)) {
           this.set(this.KEYS.debtors, debtors);
           hasChanges = true;
@@ -379,20 +367,8 @@ const DB = {
           saleId: d.sale_id, detail: d.detail || null
         }));
         const localDebts = this.getDebts();
-        const remoteDebtIds = new Set(remoteDebts.map(d => d.id));
-        const mergedDebts = [...remoteDebts];
-        for (const ld of localDebts) {
-          if (!remoteDebtIds.has(ld.id)) {
-            mergedDebts.push(ld);
-            this.enqueue('debt_create', 'debts', 'POST', [{
-              id: ld.id, debtor_id: ld.debtorId, amount: ld.amount,
-              paid: Boolean(ld.paid), date: ld.date, paidDate: ld.paidDate || null,
-              sale_id: ld.saleId || null, detail: ld.detail || null
-            }]);
-          }
-        }
-        if (JSON.stringify(localDebts) !== JSON.stringify(mergedDebts)) {
-          this.set(this.KEYS.debts, mergedDebts);
+        if (JSON.stringify(localDebts) !== JSON.stringify(remoteDebts)) {
+          this.set(this.KEYS.debts, remoteDebts);
           hasChanges = true;
         }
       }
@@ -405,27 +381,10 @@ const DB = {
           payType: s.pay_type, splitDetails: s.split_details,
           returned: Boolean(s.returned), ...(s.details || {})
         }));
+        remoteSales.sort((a, b) => new Date(a.date) - new Date(b.date));
         const localSales = this.getSales();
-        const remoteIds = new Set(remoteSales.map(s => s.id));
-        const mergedSales = [...remoteSales];
-        for (const ls of localSales) {
-          if (!remoteIds.has(ls.id)) {
-            mergedSales.push(ls);
-            const { date, totalFinal, payType, splitDetails, returned, ...rest } = ls;
-            this.enqueue('sale_create', 'sales', 'POST', [{
-              id: ls.id,
-              date: date,
-              total_final: totalFinal,
-              pay_type: payType,
-              split_details: splitDetails || null,
-              returned: Boolean(returned),
-              details: rest
-            }]);
-          }
-        }
-        mergedSales.sort((a, b) => new Date(a.date) - new Date(b.date));
-        if (JSON.stringify(localSales) !== JSON.stringify(mergedSales)) {
-          this.set(this.KEYS.sales, mergedSales);
+        if (JSON.stringify(localSales) !== JSON.stringify(remoteSales)) {
+          this.set(this.KEYS.sales, remoteSales);
           hasChanges = true;
         }
       }
@@ -446,21 +405,10 @@ const DB = {
             cashier: parsedDesc.cashier || null
           };
         });
+        remoteExpenses.sort((a, b) => new Date(a.date) - new Date(b.date));
         const localExpenses = this.getExpenses();
-        const remoteExpIds = new Set(remoteExpenses.map(e => e.id));
-        const mergedExpenses = [...remoteExpenses];
-        for (const le of localExpenses) {
-          if (!remoteExpIds.has(le.id)) {
-            mergedExpenses.push(le);
-            const descPayload = JSON.stringify({ name: le.name, type: le.type, cashier: le.cashier });
-            this.enqueue('expense_create', 'expenses', 'POST', [{
-              id: le.id, date: le.date, amount: le.amount, description: descPayload
-            }]);
-          }
-        }
-        mergedExpenses.sort((a, b) => new Date(a.date) - new Date(b.date));
-        if (JSON.stringify(localExpenses) !== JSON.stringify(mergedExpenses)) {
-          this.set(this.KEYS.expenses, mergedExpenses);
+        if (JSON.stringify(localExpenses) !== JSON.stringify(remoteExpenses)) {
+          this.set(this.KEYS.expenses, remoteExpenses);
           hasChanges = true;
         }
       }
@@ -468,13 +416,6 @@ const DB = {
       // ── Gastos Fijos ──
       if (fixedExpenses) {
         const localFE = this.getFixedExpenses();
-        const remoteFEIds = new Set(fixedExpenses.map(f => f.id));
-        for (const lf of localFE) {
-          if (!remoteFEIds.has(lf.id)) {
-            this.enqueue('fixed_expense_create', 'fixed_expenses', 'POST', [{ ...lf }]);
-            fixedExpenses.push(lf);
-          }
-        }
         if (JSON.stringify(localFE) !== JSON.stringify(fixedExpenses)) {
           this.set(this.KEYS.fixedExpenses, fixedExpenses);
           hasChanges = true;
@@ -489,17 +430,6 @@ const DB = {
           hoursObj[h.user_id][h.date] = Number(h.hours || 0);
         });
         const localHours = this.getHours();
-        Object.entries(localHours).forEach(([uId, days]) => {
-          if (!hoursObj[uId]) hoursObj[uId] = {};
-          Object.entries(days).forEach(([dStr, hVal]) => {
-            if (hoursObj[uId][dStr] === undefined) {
-              hoursObj[uId][dStr] = hVal;
-              this.enqueue('hours_set', 'hours', 'POST', [{
-                user_id: uId, date: dStr, hours: hVal
-              }], '?on_conflict=user_id,date');
-            }
-          });
-        });
         if (JSON.stringify(localHours) !== JSON.stringify(hoursObj)) {
           this.set(this.KEYS.hours, hoursObj);
           hasChanges = true;
@@ -516,18 +446,6 @@ const DB = {
           };
         });
         const localCash = this.getObj(this.KEYS.cashSession);
-        Object.entries(localCash).forEach(([dStr, csData]) => {
-          if (!cashObj[dStr]) {
-            cashObj[dStr] = csData;
-            this.enqueue('cash_set', 'cash_sessions', 'POST', [{
-              date: dStr,
-              opening_cash: csData.openingCash,
-              active: csData.active,
-              opened_by: csData.openedBy,
-              opened_at: csData.openedAt
-            }], '?on_conflict=date');
-          }
-        });
         if (JSON.stringify(localCash) !== JSON.stringify(cashObj)) {
           this.set(this.KEYS.cashSession, cashObj);
           hasChanges = true;
@@ -540,28 +458,13 @@ const DB = {
           id: a.id, date: a.date, userId: a.user_id, userName: a.user_name,
           action: a.action, description: a.description, details: a.details
         }));
+        remoteAudits.sort((a,b) => a.date.localeCompare(b.date));
         const localAudits = this.get(this.KEYS.audit) || [];
-        const merged = [...remoteAudits];
-        const remoteIds = new Set(remoteAudits.map(a => a.id));
-        for (const la of localAudits) {
-          if (!remoteIds.has(la.id)) {
-            merged.push(la);
-            this.enqueue('audit_log', 'audit_logs', 'POST', [{
-              id: la.id, tenant_id: this.currentTenant, date: la.date,
-              user_id: la.userId, user_name: la.userName, action: la.action,
-              description: la.description, details: la.details
-            }]);
-          }
-        }
-        merged.sort((a,b) => a.date.localeCompare(b.date));
-        if (JSON.stringify(localAudits) !== JSON.stringify(merged)) {
-          this.set(this.KEYS.audit, merged);
+        if (JSON.stringify(localAudits) !== JSON.stringify(remoteAudits)) {
+          this.set(this.KEYS.audit, remoteAudits);
           hasChanges = true;
         }
       }
-
-      // Procesar cualquier cola generada durante la reconciliación
-      this.processSyncQueue().catch(() => {});
 
       if (hasChanges && typeof this.onDataChange === 'function') {
         this.onDataChange();
